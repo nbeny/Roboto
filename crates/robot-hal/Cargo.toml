@@ -1,0 +1,21 @@
+[package]
+name = "robot-hal"
+description = "Modele physique du robot : cinematique differentielle entre vitesse du chassis et vitesses de roues."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+robot-types.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+robot-core.workspace = true
+robot-firmware.workspace = true
+robot-mcu.workspace = true
+
+[lints]
+workspace = true

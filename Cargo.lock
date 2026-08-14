@@ -42,6 +42,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "robot-firmware"
+version = "0.1.0"
+dependencies = [
+ "robot-mcu",
+]
+
+[[package]]
+name = "robot-hal"
+version = "0.1.0"
+dependencies = [
+ "robot-core",
+ "robot-firmware",
+ "robot-mcu",
+ "robot-types",
+ "thiserror",
+]
+
+[[package]]
+name = "robot-mcu"
+version = "0.1.0"
+
+[[package]]
 name = "robot-safety"
 version = "0.1.0"
 dependencies = [

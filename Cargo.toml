@@ -5,6 +5,9 @@ members = [
     "crates/robot-safety",
     "crates/robot-core",
     "crates/robot-telemetry",
+    "crates/robot-mcu",
+    "crates/robot-hal",
+    "crates/robot-firmware",
 ]
 
 # `ros2/` contient un espace colcon, pas des membres Cargo. Les crates de messages
@@ -25,6 +28,9 @@ authors = ["Nicolas BENY"]
 robot-types = { path = "crates/robot-types", version = "0.1.0" }
 robot-safety = { path = "crates/robot-safety", version = "0.1.0" }
 robot-core = { path = "crates/robot-core", version = "0.1.0" }
+robot-mcu = { path = "crates/robot-mcu", version = "0.1.0" }
+robot-hal = { path = "crates/robot-hal", version = "0.1.0" }
+robot-firmware = { path = "crates/robot-firmware", version = "0.1.0" }
 
 serde = { version = "1", default-features = false, features = ["derive"] }
 thiserror = "2"

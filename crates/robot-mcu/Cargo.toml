@@ -1,0 +1,16 @@
+[package]
+name = "robot-mcu"
+description = "Protocole serie entre le coeur Rust et le microcontroleur : trame COBS, CRC-16, messages versionnes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+# Aucune dependance, et c'est une contrainte, pas un hasard : cette crate tourne aussi
+# dans le firmware du microcontroleur, en `no_std` et sans allocateur. Le meme encodeur
+# et le meme decodeur aux deux extremites de la liaison.
+
+[lints]
+workspace = true

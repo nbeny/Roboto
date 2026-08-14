@@ -83,8 +83,9 @@ docker run --rm -v "$PWD":/workspace -w /workspace roboto-sim:jazzy bash scripts
 | `robot-core` | Machine à états, autorité des commandes, boucle de contrôle. | M1 ✅ |
 | `robot-telemetry` | Compteurs, instantané, logs structurés. | M1 ✅ |
 | `robot_ros2` | Adaptateur ROS 2 (`rclrs`), dans [`ros2/`](ros2/). | M2 ✅ |
-| `robot-hal` | Traits d'abstraction matérielle + implémentations mock. | M4 |
-| `robot-mcu` | Protocole série versionné Rust ↔ Pico 2. | M4 |
+| `robot-mcu` | Protocole série versionné Rust ↔ Pico 2. `no_std`. | M4 ✅ |
+| `robot-hal` | Cinématique différentielle châssis ↔ roues. | M4 ✅ |
+| `robot-firmware` | Logique du microcontrôleur : PID, watchdog, supervision. `no_std`. | M4 ✅ |
 
 ---
 
@@ -151,14 +152,23 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 | M1 | Cœur Rust minimal | ✅ |
 | M2 | Adaptateur ROS 2 + nœud | ✅ |
 | M3 | Simulation Gazebo | ✅ |
-| M4 | Firmware Pico 2 + protocole série | |
+| M4 | Protocole série + logique du firmware | ✅ |
+| M4b | Binaire du firmware : PIO, USB, pont en H | bloqué sur le matériel |
 | M5 | Bring-up robot réel | |
 | M6 | SLAM + Nav2 | |
 | M7 | API TypeScript + dashboard | |
 | M8–M11 | Vision, voix, agent IA, produit | |
 
 M1 à M3 ne nécessitent aucun achat. **Le matériel n'est commandé qu'après validation de
-M3** — on saura alors précisément quoi commander et pourquoi.
+M3** — on saura alors précisément quoi commander et pourquoi. M3 étant validée, la
+commande est débloquée.
+
+M4 livre tout ce qui se vérifie sans carte : le [protocole
+série](docs/hardware/serial-protocol.md), la cinématique, l'asservissement et la
+supervision du microcontrôleur, plus un banc de bout en bout où le **vrai** code de
+firmware tourne face au vrai cœur. Le binaire embarqué — décodage PIO des encodeurs, USB
+CDC, pilotage du pont en H — attend une carte : l'écrire sans pouvoir l'exécuter
+produirait des centaines de lignes invérifiables.
 
 ---
 

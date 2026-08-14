@@ -1,0 +1,15 @@
+[package]
+name = "robot-firmware"
+description = "Logique du firmware du microcontroleur : asservissement de vitesse et supervision, sans dependance materielle."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+robot-mcu.workspace = true
+
+[lints]
+workspace = true

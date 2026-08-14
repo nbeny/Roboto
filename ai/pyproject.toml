@@ -1,0 +1,28 @@
+[project]
+name = "roboto-agent"
+version = "0.1.0"
+description = "Agent conversationnel qui pilote Roboto par ordres de haut niveau."
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+
+# Une seule dépendance d'exécution. Le client HTTP tient dans la bibliothèque standard,
+# et la couche de sécurité n'a aucune dépendance du tout — c'est ce qui la rend
+# vérifiable sans réseau, sans robot et sans modèle.
+dependencies = ["anthropic>=0.104"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+roboto-agent = "roboto_agent.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["roboto_agent*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -93,6 +93,7 @@ Hors du workspace Cargo :
 |---|---|---|
 | [`api/`](api/) | REST et WebSocket, en TypeScript. Aucune logique robotique. | M7 ✅ |
 | [`web/`](web/) | Tableau de bord Next.js. | M7 ✅ |
+| [`ai/`](ai/) | Agent conversationnel. Aucun accès ROS 2, aucune consigne de vitesse. | M10 ✅ |
 | [`simulation/`](simulation/) | Modèle Gazebo, SLAM, Nav2. | M3, M6 ✅ |
 
 ---
@@ -164,6 +165,7 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 | M4b | Binaire du firmware : PIO, USB, pont en H | bloqué sur le matériel |
 | M6 | SLAM + Nav2 en simulation | ✅ |
 | M7 | API TypeScript + dashboard | ✅ |
+| M10 | Agent IA à outils de haut niveau | ✅ |
 | M5 | Bring-up robot réel | |
 | M6 | SLAM + Nav2 | |
 | M7 | API TypeScript + dashboard | |

@@ -171,6 +171,28 @@ jobs:
       - run: npm run build
         working-directory: web
 
+  agent:
+    name: Agent IA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -e ".[dev]"
+        working-directory: ai
+
+      # Sans reseau, sans robot, sans cle API : la couche de securite de l'agent n'a
+      # aucune dependance, et c'est precisement ce qui la rend verifiable ainsi.
+      - run: python -m pytest -q
+        working-directory: ai
+
+      # Le catalogue doit rester serialisable : il part tel quel dans une requete.
+      - run: python -m roboto_agent --print-tools > /dev/null
+        working-directory: ai
+
   windows:
     name: Windows
     runs-on: windows-latest

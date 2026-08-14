@@ -15,6 +15,7 @@ probablement pas une.
 | [0007](0007-marge-entre-nav2-et-la-securite.md) | Les limites de Nav2 restent à l'intérieur de l'enveloppe de sécurité | Acceptée |
 | [0008](0008-watchdog-de-commande-et-robot-immobile.md) | Le watchdog de commande n'escalade que si le robot roule | Acceptée |
 | [0009](0009-api-par-rosbridge.md) | L'API parle à ROS 2 par rosbridge, pas par un binding natif | Acceptée |
+| [0010](0010-agent-sans-acces-ros2.md) | L'agent IA n'atteint le robot que par l'API HTTP | Acceptée |
 
 Le design complet — architecture, nomenclature matérielle, roadmap — vit dans
 [`../superpowers/specs/2026-08-14-robot-ai-core-design.md`](../superpowers/specs/2026-08-14-robot-ai-core-design.md).

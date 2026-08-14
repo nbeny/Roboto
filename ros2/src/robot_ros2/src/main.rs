@@ -32,7 +32,7 @@ use geometry_msgs::msg::Twist;
 // Trait d'extension : `create_basic_executor` est fourni par lui, pas par `Context`.
 use rclrs::CreateBasicExecutor as _;
 use robot_core::RobotConfig;
-use robot_types::CommandSource;
+use robot_types::{CommandSource, Monotonic};
 use std_msgs::msg::String as StringMsg;
 
 use crate::bridge::{names, parse_state, twist_from_velocity, velocity_from_twist};
@@ -55,23 +55,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let node = executor.create_node(NODE_NAME)?;
 
     let shared = Arc::new(Mutex::new(Shared::new(RobotConfig::default())?));
-
-    // Horloge **monotone**, et non l'horloge du noeud.
-    //
-    // `node.get_clock()` rend le temps ROS, adosse a l'horloge murale hors simulation.
-    // Or une horloge murale n'est pas monotone : mesure faite dans cette image, sur
-    // 57,7 millions d'echantillons en 20 s, l'horloge murale a recule une fois de
-    // 391 ms, la monotone jamais. Le coupable est la resynchronisation de la machine
-    // virtuelle sur son hote — Docker Desktop et WSL2 y sont sujets, mais le probleme
-    // n'a rien de specifique : NTP produit le meme effet sur une machine reelle.
-    //
-    // Un recul de cette ampleur fait basculer le robot en SAFE_STOP sans raison. Une
-    // boucle de controle se cadence sur une horloge monotone, point.
-    //
-    // Le temps simule de Gazebo sera cable en Milestone 3, ou `use_sim_time` deviendra
-    // pertinent : la source de temps sera alors le topic `/clock`, dont les reculs — une
-    // relance du simulateur — sont de vraies discontinuites qu'il faut signaler.
-    let clock = Arc::new(rclrs::Clock::steady());
+    let (clock, time_source) = select_clock(&node);
+    let clock = Arc::new(clock);
 
     let state_publisher = node.create_publisher::<StringMsg>(names::STATE)?;
     let velocity_publisher = node.create_publisher::<Twist>(names::SAFE_CMD_VEL)?;
@@ -164,6 +149,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 loop {
                     // Echeance absolue plutot que `sleep(PERIOD)` : sinon le temps de
                     // traitement de chaque cycle s'accumule en derive.
+                    //
+                    // La cadence suit l'horloge murale, y compris sous temps simule. Ce
+                    // n'est pas un probleme de justesse : toute la logique du coeur est
+                    // pilotee par l'instant horodate qu'on lui passe. Seule la frequence
+                    // d'echantillonnage s'ecarterait, et uniquement si le simulateur
+                    // tournait a un facteur temps reel different de 1.
                     deadline += CONTROL_PERIOD;
                     if let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
                         thread::sleep(remaining);
@@ -196,6 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         event = "node_started",
         node = NODE_NAME,
         period_ms = CONTROL_PERIOD.as_millis() as u64,
+        time_source,
         "coeur du robot expose sur ROS 2"
     );
 
@@ -213,14 +205,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-/// Lit l'horloge ROS 2 et l'horodate, **sous le verrou deja detenu**.
+/// Choisit la source de temps du noeud, selon le parametre standard `use_sim_time`.
 ///
-/// L'atomicite des deux operations n'est pas un detail. Les lire separement autorise cet
+/// **En simulation**, l'horloge du noeud. `rclrs` l'alimente lui-meme depuis le topic
+/// `/clock` des que `use_sim_time` vaut vrai : le temps simule est alors la seule
+/// reference coherente avec la physique du simulateur.
+///
+/// **Sinon**, une horloge monotone, et surtout pas celle du noeud. Hors simulation, le
+/// temps ROS est adosse a l'horloge murale, qui recule : mesure faite dans l'image de
+/// simulation, 57,7 millions d'echantillons en 20 s, un recul de 391 ms sur l'horloge
+/// murale, aucun sur la monotone. Voir
+/// `docs/architecture/0006-horloge-monotone-et-non-murale.md`.
+///
+/// `use_sim_time` est deja declare par `rclrs`, qui s'en sert pour piloter l'horloge du
+/// noeud. On le lit donc au lieu de le declarer : une seconde declaration echouerait.
+fn select_clock(node: &rclrs::Node) -> (rclrs::Clock, &'static str) {
+    let use_sim_time = node
+        .use_undeclared_parameters()
+        .get::<bool>("use_sim_time")
+        .unwrap_or(false);
+
+    if use_sim_time {
+        (node.get_clock(), "simulated")
+    } else {
+        (rclrs::Clock::steady(), "steady")
+    }
+}
+
+/// Lit l'horloge et l'horodate, **sous le verrou deja detenu**.
+///
+/// L'atomicite des deux operations n'est pas un detail. Les separer autorise cet
 /// entrelacement entre le thread de controle et un callback d'abonnement :
 ///
 /// ```text
-/// callback        : lit l'horloge -> t1
-/// boucle controle : lit l'horloge -> t2 (t2 > t1)
+/// callback        : lit l'heure -> t1
+/// boucle controle : lit l'heure -> t2 (t2 > t1)
 /// boucle controle : prend le verrou, horodate t2
 /// callback        : prend le verrou, horodate t1     <-- recul apparent
 /// ```
@@ -228,10 +247,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// [`robot_types::MonotonicClock`] detecte ce recul et force un `SAFE_STOP`, ce qui est
 /// exactement son role — mais ici la perte de repere temporel serait imaginaire. Prendre
 /// le verrou d'abord rend l'ordre des horodatages identique a l'ordre d'acquisition.
-///
-/// L'horloge vient du noeud et non du systeme : c'est ce qui permettra au meme binaire de
-/// tourner sous Gazebo avec `use_sim_time`.
-fn stamp_now(shared: &mut Shared, clock: &rclrs::Clock) -> robot_types::Monotonic {
+fn stamp_now(shared: &mut Shared, clock: &rclrs::Clock) -> Monotonic {
+    // Sous temps simule, l'horloge rend zero tant que `/clock` n'a rien publie. Le robot
+    // reste alors en BOOTING : c'est le comportement voulu, il n'a aucune raison de
+    // decider quoi que ce soit avant que le temps ne s'ecoule.
     let nanos = u64::try_from(clock.now().nsec).unwrap_or(0);
     shared.stamp(nanos)
 }

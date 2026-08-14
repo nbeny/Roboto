@@ -65,6 +65,13 @@ docker run --rm -v "$PWD":/workspace -w /workspace/ros2 roboto-ros2:jazzy colcon
 docker run --rm -v "$PWD":/workspace -w /workspace roboto-ros2:jazzy bash scripts/ros2-smoke-test.sh
 ```
 
+Et la simulation Gazebo — voir [`simulation/README.md`](simulation/README.md) :
+
+```bash
+docker build -t roboto-sim:jazzy docker/simulation
+docker run --rm -v "$PWD":/workspace -w /workspace roboto-sim:jazzy bash scripts/sim-smoke-test.sh
+```
+
 ---
 
 ## Crates
@@ -143,7 +150,7 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 |---|---|---|
 | M1 | Cœur Rust minimal | ✅ |
 | M2 | Adaptateur ROS 2 + nœud | ✅ |
-| M3 | Simulation Gazebo | |
+| M3 | Simulation Gazebo | ✅ |
 | M4 | Firmware Pico 2 + protocole série | |
 | M5 | Bring-up robot réel | |
 | M6 | SLAM + Nav2 | |

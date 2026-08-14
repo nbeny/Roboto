@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<!--
+  Piece d'interieur : quatre murs et quelques obstacles.
+
+  Volontairement petite et fermee. Un LiDAR qui ne voit que le vide ne prouve rien, et
+  la Milestone 6 aura besoin de murs pour que SLAM Toolbox ait de quoi s'accrocher.
+-->
+<sdf version="1.10">
+  <world name="indoor">
+
+    <physics name="default" type="ignored">
+      <max_step_size>0.002</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+
+    <!-- Le LiDAR et la camera passent par le pipeline de rendu, meme sans interface
+         graphique. Sans GPU, c'est llvmpipe qui s'en charge. -->
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.3 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>100 100</size></plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>100 100</size></plane>
+          </geometry>
+          <material>
+            <ambient>0.35 0.35 0.38 1</ambient>
+            <diffuse>0.45 0.45 0.48 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Piece de 8 x 6 m, murs de 40 cm de haut : suffisant pour un LiDAR a 15 cm. -->
+    <model name="walls">
+      <static>true</static>
+      <link name="link">
+        <collision name="north">
+          <pose>0 3 0.2 0 0 0</pose>
+          <geometry><box><size>8 0.1 0.4</size></box></geometry>
+        </collision>
+        <visual name="north_visual">
+          <pose>0 3 0.2 0 0 0</pose>
+          <geometry><box><size>8 0.1 0.4</size></box></geometry>
+          <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.7 0.7 0.72 1</diffuse></material>
+        </visual>
+
+        <collision name="south">
+          <pose>0 -3 0.2 0 0 0</pose>
+          <geometry><box><size>8 0.1 0.4</size></box></geometry>
+        </collision>
+        <visual name="south_visual">
+          <pose>0 -3 0.2 0 0 0</pose>
+          <geometry><box><size>8 0.1 0.4</size></box></geometry>
+          <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.7 0.7 0.72 1</diffuse></material>
+        </visual>
+
+        <collision name="east">
+          <pose>4 0 0.2 0 0 0</pose>
+          <geometry><box><size>0.1 6 0.4</size></box></geometry>
+        </collision>
+        <visual name="east_visual">
+          <pose>4 0 0.2 0 0 0</pose>
+          <geometry><box><size>0.1 6 0.4</size></box></geometry>
+          <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.7 0.7 0.72 1</diffuse></material>
+        </visual>
+
+        <collision name="west">
+          <pose>-4 0 0.2 0 0 0</pose>
+          <geometry><box><size>0.1 6 0.4</size></box></geometry>
+        </collision>
+        <visual name="west_visual">
+          <pose>-4 0 0.2 0 0 0</pose>
+          <geometry><box><size>0.1 6 0.4</size></box></geometry>
+          <material><ambient>0.6 0.6 0.62 1</ambient><diffuse>0.7 0.7 0.72 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_box">
+      <static>true</static>
+      <pose>2.0 1.0 0.15 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.4 0.4 0.3</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.4 0.4 0.3</size></box></geometry>
+          <material><ambient>0.6 0.3 0.2 1</ambient><diffuse>0.75 0.4 0.25 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_cylinder">
+      <static>true</static>
+      <pose>-1.5 -1.2 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.25</radius><length>0.4</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.25</radius><length>0.4</length></cylinder></geometry>
+          <material><ambient>0.2 0.45 0.3 1</ambient><diffuse>0.25 0.6 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

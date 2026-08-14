@@ -78,6 +78,45 @@ jobs:
           docker run --rm -v "$PWD":/workspace -w /workspace/ros2 \
             roboto-ros2:jazzy colcon test --event-handlers console_direct+
 
+  simulation:
+    name: Simulation Gazebo
+    runs-on: ubuntu-latest
+    # Le job le plus lourd de la chaine : construction de l'image, puis Gazebo en rendu
+    # logiciel. Il ne garde qu'une chose, mais elle vaut le cout : que le robot simule
+    # obeisse encore au coeur Rust, et que la couche de securite tienne jusque dans le
+    # simulateur.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construire l'image ROS 2
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/ros2
+          tags: roboto-ros2:jazzy
+          load: true
+          cache-from: type=gha,scope=ros2
+          cache-to: type=gha,mode=max,scope=ros2
+
+      - name: Construire l'image de simulation
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/simulation
+          tags: roboto-sim:jazzy
+          load: true
+          cache-from: type=gha,scope=sim
+          cache-to: type=gha,mode=max,scope=sim
+
+      - name: Construire l'adaptateur
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace/ros2 \
+            roboto-sim:jazzy colcon build
+
+      - name: Essai de bout en bout en simulation
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace \
+            roboto-sim:jazzy bash scripts/sim-smoke-test.sh
+
   windows:
     name: Windows
     runs-on: windows-latest

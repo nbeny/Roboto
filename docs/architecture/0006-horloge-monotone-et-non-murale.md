@@ -46,11 +46,20 @@ l'horloge du nœud.
 **Ce qu'on gagne.** Plus aucun `SAFE_STOP` fantôme. Le test de bout en bout, auparavant
 intermittent, passe désormais de façon reproductible.
 
-**Ce qu'on remet à plus tard.** Le temps simulé. En Milestone 2, il n'y a pas de
-simulateur : la question ne se pose pas. La Milestone 3 devra sélectionner la source
-selon `use_sim_time` — horloge monotone sur le robot réel, topic `/clock` en simulation.
-Dans ce second cas, un recul est une vraie discontinuité, une relance du simulateur, et
-le signaler reste le bon comportement.
+**Le temps simulé — réglé en Milestone 3.** Le nœud choisit désormais sa source selon le
+paramètre standard `use_sim_time` : horloge monotone quand il vaut faux, horloge du nœud
+quand il vaut vrai. Dans ce second cas, c'est `rclrs` qui fait le travail — son
+`TimeSource` interne s'abonne à `/clock` et pilote l'horloge du nœud, ce qui a rendu
+inutile l'abonnement maison écrit d'abord, puis supprimé.
+
+Un détail à connaître : `use_sim_time` est **déjà déclaré** par `rclrs`. Le déclarer une
+seconde fois échoue. Le nœud le lit donc via `use_undeclared_parameters()`. La première
+version déclarait le paramètre et, en cas d'échec, retombait « proprement » sur l'horloge
+monotone — si bien que la simulation tournait en temps mural sans que rien ne le signale.
+Un repli silencieux sur un mode dégradé est pire que l'échec qu'il prétend absorber.
+
+Sous temps simulé, un recul reste une vraie discontinuité — une relance du simulateur —
+et le signaler demeure le bon comportement.
 
 **Ce qui n'était pas le correctif.** Une tolérance aux petits reculs a été implémentée
 au cours de l'enquête, sur l'hypothèse d'une dérive NTP de l'ordre de la microseconde.

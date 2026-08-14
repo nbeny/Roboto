@@ -1,0 +1,17 @@
+[package]
+name = "robot-core"
+description = "Coeur metier du robot : machine a etats, autorite des commandes, orchestration de la boucle de controle."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+robot-safety.workspace = true
+robot-types.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

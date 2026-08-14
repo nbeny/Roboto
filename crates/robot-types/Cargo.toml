@@ -1,0 +1,19 @@
+[package]
+name = "robot-types"
+description = "Types fondamentaux partages par le coeur du robot : temps monotone, vitesses, poses, commandes."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

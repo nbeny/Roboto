@@ -1,0 +1,15 @@
+# Décisions d'architecture
+
+Chaque fichier consigne une décision structurante : le contexte qui l'a rendue nécessaire,
+l'arbitrage retenu, et ce qu'on paie en échange. Une décision qui n'a rien coûté n'en était
+probablement pas une.
+
+| # | Décision | Statut |
+|---|---|---|
+| [0001](0001-coeur-rust-sans-ros2.md) | Le cœur Rust ne dépend pas de ROS 2 | Acceptée |
+| [0002](0002-pas-d-horloge-ambiante.md) | Aucune horloge ambiante dans le cœur | Acceptée |
+| [0003](0003-pas-d-async-dans-le-coeur.md) | Aucun runtime asynchrone dans le cœur | Acceptée |
+| [0004](0004-ros2-jazzy-et-gazebo-harmonic.md) | ROS 2 Jazzy Jalisco et Gazebo Harmonic | Acceptée |
+
+Le design complet — architecture, nomenclature matérielle, roadmap — vit dans
+[`../superpowers/specs/2026-08-14-robot-ai-core-design.md`](../superpowers/specs/2026-08-14-robot-ai-core-design.md).

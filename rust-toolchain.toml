@@ -1,0 +1,6 @@
+# Canal stable : le plancher de compatibilite est fixe par `rust-version = "1.85"`
+# dans Cargo.toml, et la reproductibilite des dependances par Cargo.lock.
+# Epingler une version exacte ici penaliserait les contributeurs sans benefice reel.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]

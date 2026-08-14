@@ -149,7 +149,7 @@ crate Rust.
 | Décision | Choix | Justification |
 |---|---|---|
 | ROS 2 | **Jazzy Jalisco** | LTS jusqu'à mai 2029, Ubuntu 24.04. Écosystème le plus dense (Nav2, slam_toolbox, ros2_control, ros_gz). Kilted meurt en nov. 2026 ; Lyrical Luth, sorti en mai 2026, n'a pas encore l'écosystème tiers. |
-| Rust | **1.97.1 stable**, edition 2024, MSRV 1.85 | `rust-toolchain.toml` pinné pour la reproductibilité. |
+| Rust | **stable** (1.97.1 au moment de la rédaction), edition 2024, MSRV 1.85 | `rust-toolchain.toml` fixe le canal `stable` ; le plancher de compatibilité est porté par `rust-version` et la reproductibilité des dépendances par `Cargo.lock`. Épingler une version exacte pénaliserait les contributeurs sans bénéfice réel. |
 | Runtime async | **Aucun dans le cœur**, Tokio aux bords | Cf. §4.3. |
 | Binding ROS 2 | **`rclrs`** derrière l'adaptateur | Direction officielle du projet, actions/services/paramètres présents. Instabilité confinée à une crate. |
 | Simulateur | **Gazebo Harmonic** | Appairage officiel avec Jazzy via `ros_gz`, LTS jusqu'à sept. 2028, plugins natifs diff-drive/LiDAR/IMU/caméra. Isaac Sim écarté : GPU NVIDIA requis, complexité sans contrepartie ici. |

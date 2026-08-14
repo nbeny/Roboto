@@ -1,0 +1,26 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# ROS 2 / colcon
+/ros2/build/
+/ros2/install/
+/ros2/log/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+dist/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

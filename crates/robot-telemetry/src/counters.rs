@@ -16,10 +16,20 @@ pub struct EventCounters {
     pub emergency_stops: u64,
     /// Changements d'etat.
     pub state_transitions: u64,
+    /// Lignes de journal etouffees parce qu'elles repetaient la precedente.
+    ///
+    /// Comptees et non perdues : le nombre exact d'evenements reste connu, seule leur
+    /// journalisation est allegee. Sans cela, une pile de navigation qui insiste pendant
+    /// un `SAFE_STOP` produirait des dizaines de lignes identiques par seconde, et le
+    /// journal deviendrait illisible au moment precis ou on en a besoin.
+    pub suppressed_logs: u64,
 }
 
 impl EventCounters {
     /// Total des evenements comptabilises.
+    ///
+    /// `suppressed_logs` n'y figure pas : ce n'est pas un evenement du robot, mais une
+    /// mesure du bruit epargne au journal.
     #[must_use]
     pub const fn total(self) -> u64 {
         self.commands_accepted

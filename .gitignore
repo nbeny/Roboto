@@ -7,6 +7,10 @@
 /ros2/install/
 /ros2/log/
 
+# colcon lance depuis la racine y depose aussi ses artefacts.
+/log/
+/.cargo/
+
 # Genere par colcon-ros-cargo : les entrees [patch.crates-io] pointant vers les crates
 # de messages de l'espace d'installation local.
 /ros2/.cargo/

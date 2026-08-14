@@ -1,0 +1,402 @@
+/*
+ * Panneau d'instrumentation.
+ *
+ * Le parti pris n'est pas decoratif : un operateur surveille une machine qui peut
+ * blesser quelqu'un. Il doit lire l'etat d'un coup d'oeil et trouver l'arret sans
+ * reflechir. D'ou le fond sombre a fort contraste, la typographie technique, l'accent
+ * qui change avec l'etat, et un arret d'urgence traite comme un vrai champignon.
+ *
+ * L'animation est volontairement rare : apres une heure de surveillance, tout ce qui
+ * bouge sans raison devient du bruit.
+ */
+
+:root {
+  --void: #070a09;
+  --panel: #0e1211;
+  --panel-raised: #141a18;
+  --rule: #1f2a26;
+  --rule-bright: #2d3c37;
+
+  --ink: #d8e4df;
+  --ink-dim: #7f918b;
+  --ink-faint: #4d5b56;
+
+  /* Accent pilote par l'etat du robot, redefini sur [data-state]. */
+  --accent: #6b7f79;
+  --accent-glow: rgba(107, 127, 121, 0.18);
+
+  --danger: #ff2f2f;
+  --danger-deep: #8f0f0f;
+
+  --grid: 4px;
+}
+
+/* L'accent porte l'information : la couleur dit l'etat avant que le texte ne soit lu. */
+[data-state="BOOTING"] { --accent: #6b7f79; --accent-glow: rgba(107, 127, 121, 0.18); }
+[data-state="IDLE"] { --accent: #5b93c9; --accent-glow: rgba(91, 147, 201, 0.16); }
+[data-state="TELEOPERATION"] { --accent: #e0a33c; --accent-glow: rgba(224, 163, 60, 0.16); }
+[data-state="NAVIGATING"] { --accent: #4fd18b; --accent-glow: rgba(79, 209, 139, 0.16); }
+[data-state="PAUSED"] { --accent: #b98b45; --accent-glow: rgba(185, 139, 69, 0.14); }
+[data-state="CHARGING"] { --accent: #4fc9d1; --accent-glow: rgba(79, 201, 209, 0.16); }
+[data-state="SAFE_STOP"] { --accent: #ff5c3d; --accent-glow: rgba(255, 92, 61, 0.2); }
+[data-state="ERROR"] { --accent: #ff2f2f; --accent-glow: rgba(255, 47, 47, 0.22); }
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    /* Halo discret derriere le panneau, pour eviter le noir plat. */
+    radial-gradient(120% 90% at 70% 0%, var(--accent-glow), transparent 60%),
+    var(--void);
+  color: var(--ink);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  transition: background 600ms ease;
+}
+
+/* Grain fin : casse l'aplat sans se voir. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 100;
+}
+
+/* --- Ossature ---------------------------------------------------------------- */
+
+.shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: calc(var(--grid) * 4);
+  gap: calc(var(--grid) * 3);
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--grid) * 4);
+  padding-bottom: calc(var(--grid) * 3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark {
+  font-family: var(--font-condensed), sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.wordmark span {
+  color: var(--accent);
+}
+
+.masthead-meta {
+  display: flex;
+  gap: calc(var(--grid) * 5);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.link-state {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--grid) * 2);
+}
+
+.link-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.link-state[data-live="true"] .link-dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.link-state[data-live="true"] {
+  color: var(--ink-dim);
+}
+
+/* --- Corps ------------------------------------------------------------------- */
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: calc(var(--grid) * 3);
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(240px, 1fr) auto;
+  }
+}
+
+.panel {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  min-height: 0;
+}
+
+/* Coins d'equerre : signature visuelle, et repere pour l'oeil. */
+.panel::before,
+.panel::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--rule-bright);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.panel::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+}
+
+.panel::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.panel-label {
+  position: absolute;
+  top: calc(var(--grid) * 2);
+  left: calc(var(--grid) * 3);
+  z-index: 2;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* --- Carte ------------------------------------------------------------------- */
+
+.map-panel {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.map-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  image-rendering: pixelated;
+}
+
+.map-empty {
+  color: var(--ink-faint);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: calc(var(--grid) * 6);
+}
+
+.map-hint {
+  position: absolute;
+  right: calc(var(--grid) * 3);
+  bottom: calc(var(--grid) * 2);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* --- Colonne de droite -------------------------------------------------------- */
+
+.sidebar {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: calc(var(--grid) * 3);
+  min-height: 0;
+}
+
+.state-block {
+  padding: calc(var(--grid) * 8) calc(var(--grid) * 4) calc(var(--grid) * 4);
+  text-align: center;
+}
+
+.state-name {
+  font-family: var(--font-condensed), sans-serif;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow);
+  word-break: break-word;
+}
+
+.state-caption {
+  margin-top: calc(var(--grid) * 2);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.readouts {
+  padding: calc(var(--grid) * 8) calc(var(--grid) * 4) calc(var(--grid) * 4);
+  overflow-y: auto;
+}
+
+.readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--grid) * 3);
+  padding: calc(var(--grid) * 2.5) 0;
+  border-bottom: 1px dashed var(--rule);
+}
+
+.readout:last-child {
+  border-bottom: none;
+}
+
+.readout-label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.readout-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink);
+}
+
+/* Ce que le robot ne mesure pas doit se voir comme tel. */
+.readout-value[data-absent="true"] {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* --- Commandes ---------------------------------------------------------------- */
+
+.controls {
+  display: grid;
+  gap: calc(var(--grid) * 2);
+  padding: calc(var(--grid) * 3);
+}
+
+.stop {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: calc(var(--grid) * 5) calc(var(--grid) * 4);
+  border: 2px solid var(--danger);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #c11616, var(--danger-deep));
+  color: #fff;
+  font-family: var(--font-condensed), sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  cursor: pointer;
+  /* Relief marque : le bouton doit se lire comme un objet qu'on enfonce. */
+  box-shadow:
+    0 4px 0 var(--danger-deep),
+    0 6px 18px rgba(255, 47, 47, 0.28);
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+
+.stop:hover {
+  background: linear-gradient(180deg, #d81b1b, #a11212);
+}
+
+.stop:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--danger-deep), 0 2px 10px rgba(255, 47, 47, 0.2);
+}
+
+.stop:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.secondary {
+  display: block;
+  width: 100%;
+  padding: calc(var(--grid) * 3);
+  border: 1px solid var(--rule-bright);
+  background: var(--panel-raised);
+  color: var(--ink-dim);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.secondary:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* --- Journal ------------------------------------------------------------------ */
+
+.log {
+  margin-top: calc(var(--grid) * 2);
+  max-height: 96px;
+  overflow-y: auto;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+.log-line {
+  display: flex;
+  gap: calc(var(--grid) * 2);
+  padding: 2px 0;
+}
+
+.log-time {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-line[data-severity="error"] {
+  color: var(--danger);
+}
+
+.log-line[data-severity="warning"] {
+  color: #e0a33c;
+}

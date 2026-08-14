@@ -24,12 +24,17 @@ RUN apt-get update \
         "ros-${ROS_DISTRO}-slam-toolbox" \
         "ros-${ROS_DISTRO}-navigation2" \
         "ros-${ROS_DISTRO}-nav2-bringup" \
+        # Passerelle JSON/WebSocket vers ROS 2, utilisee par l'API TypeScript.
+        "ros-${ROS_DISTRO}-rosbridge-suite" \
         # Rendu logiciel : en Harmonic, le LiDAR est un capteur `gpu_lidar` et passe
         # donc par le pipeline de rendu. Sans GPU dans le conteneur, c'est llvmpipe qui
         # s'en charge — lent, mais suffisant pour un LiDAR 2D a 10 Hz.
         libgl1-mesa-dri \
         libglx-mesa0 \
         mesa-utils \
+        # Pour executer l'API TypeScript dans le meme environnement que la simulation.
+        nodejs \
+        npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Force le rendu logiciel : sans cela, ogre2 cherche un GPU et echoue.

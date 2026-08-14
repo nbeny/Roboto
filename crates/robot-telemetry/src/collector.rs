@@ -1,5 +1,5 @@
 use robot_core::{Robot, RobotEvent};
-use robot_types::Monotonic;
+use robot_types::{CommandSource, Monotonic};
 
 use crate::counters::EventCounters;
 use crate::snapshot::TelemetrySnapshot;
@@ -8,6 +8,8 @@ use crate::snapshot::TelemetrySnapshot;
 #[derive(Debug, Clone, Default)]
 pub struct TelemetryCollector {
     counters: EventCounters,
+    /// Dernier refus journalise, pour ne pas repeter la meme ligne indefiniment.
+    last_rejection: Option<(CommandSource, &'static str)>,
 }
 
 impl TelemetryCollector {
@@ -26,6 +28,33 @@ impl TelemetryCollector {
     /// Comptabilise un evenement et emet le log structure correspondant.
     pub fn record(&mut self, event: &RobotEvent) {
         self.count(event);
+
+        // Un refus qui se repete a l'identique n'apprend rien de plus au bout de la
+        // deuxieme fois — et une pile de navigation qui insiste pendant un `SAFE_STOP`
+        // en produit des dizaines par seconde.
+        if let RobotEvent::CommandRejected { source, reason, .. } = event {
+            let signature = (*source, reason.kind());
+
+            if self.last_rejection == Some(signature) {
+                self.counters.suppressed_logs = self.counters.suppressed_logs.saturating_add(1);
+                tracing::debug!(
+                    event = "command_rejected",
+                    source = source.as_str(),
+                    rejection = reason.kind(),
+                    "{reason} (repetition)"
+                );
+                return;
+            }
+
+            self.last_rejection = Some(signature);
+        }
+
+        // Apres un changement d'etat, le meme refus decrit une situation nouvelle : il
+        // redevient digne d'etre signale.
+        if matches!(event, RobotEvent::StateChanged { .. }) {
+            self.last_rejection = None;
+        }
+
         log(event);
     }
 

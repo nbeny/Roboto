@@ -87,6 +87,14 @@ docker run --rm -v "$PWD":/workspace -w /workspace roboto-sim:jazzy bash scripts
 | `robot-hal` | Cinématique différentielle châssis ↔ roues. | M4 ✅ |
 | `robot-firmware` | Logique du microcontrôleur : PID, watchdog, supervision. `no_std`. | M4 ✅ |
 
+Hors du workspace Cargo :
+
+| Composant | Responsabilité | Milestone |
+|---|---|---|
+| [`api/`](api/) | REST et WebSocket, en TypeScript. Aucune logique robotique. | M7 ✅ |
+| [`web/`](web/) | Tableau de bord Next.js. | M7 ✅ |
+| [`simulation/`](simulation/) | Modèle Gazebo, SLAM, Nav2. | M3, M6 ✅ |
+
 ---
 
 ## Deux décisions qui expliquent le reste
@@ -155,6 +163,7 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 | M4 | Protocole série + logique du firmware | ✅ |
 | M4b | Binaire du firmware : PIO, USB, pont en H | bloqué sur le matériel |
 | M6 | SLAM + Nav2 en simulation | ✅ |
+| M7 | API TypeScript + dashboard | ✅ |
 | M5 | Bring-up robot réel | |
 | M6 | SLAM + Nav2 | |
 | M7 | API TypeScript + dashboard | |

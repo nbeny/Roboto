@@ -28,6 +28,7 @@ from launch.actions import (
     IncludeLaunchDescription,
     TimerAction,
 )
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -73,6 +74,11 @@ def generate_launch_description() -> LaunchDescription:
                     "transition, le coeur refuse les consignes de Nav2 : c'est voulu, "
                     "mais cela se diagnostique mal."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "rosbridge",
+                default_value="true",
+                description="Demarrer la passerelle WebSocket utilisee par l'API.",
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -168,6 +174,16 @@ def generate_launch_description() -> LaunchDescription:
                     {"node_names": NAVIGATION_NODES},
                 ],
                 output="screen",
+            ),
+            # Passerelle JSON/WebSocket : c'est par la que l'API TypeScript parle a ROS 2.
+            # Elle reste optionnelle — la simulation et la navigation fonctionnent sans.
+            Node(
+                package="rosbridge_server",
+                executable="rosbridge_websocket",
+                name="rosbridge_websocket",
+                parameters=[use_sim_time, {"port": 9090}],
+                output="screen",
+                condition=IfCondition(LaunchConfiguration("rosbridge")),
             ),
             # --- Autorisation du mouvement ---------------------------------------------
             # Le coeur n'accepte les consignes de navigation qu'en etat NAVIGATING. Sans

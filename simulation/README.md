@@ -189,3 +189,7 @@ données horodatées en temps simulé doit recevoir `--ros-args -p use_sim_time:
   différent de 1.
 - Pas d'interface graphique : le serveur tourne seul. Pour l'affichage, lancer `gz sim -g`
   depuis un environnement disposant d'un serveur X.
+- L'image pèse environ 8 Go. `npm`, installé depuis apt pour exécuter l'API dans le même
+  environnement, y tire à lui seul plusieurs centaines de paquets `node-*` dont rien
+  n'a besoin ici — l'API est compilée côté hôte. À remplacer par une installation de
+  Node seul.

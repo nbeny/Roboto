@@ -1,0 +1,28 @@
+{
+  "name": "roboto-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "API REST et WebSocket entre le dashboard et le coeur du robot.",
+  "license": "Apache-2.0",
+  "enginesReason": "Le code compile tourne des Node 18 — verifie dans l'image de simulation, qui embarque la version d'Ubuntu. Seul `npm run dev` exige Node 22, pour l'execution directe du TypeScript.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10"
+  }
+}

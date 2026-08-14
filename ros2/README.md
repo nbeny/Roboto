@@ -78,6 +78,25 @@ ros2 topic pub --once /robot_core/request_state std_msgs/String "{data: 'TELEOPE
 
 ---
 
+## Un piège à connaître
+
+**Lancer `colcon build` depuis la racine du dépôt casse le workspace Cargo.**
+
+`colcon-ros-cargo` écrit un `.cargo/config.toml` dans le répertoire d'où il est appelé.
+Depuis la racine, ce fichier s'applique aussi au workspace Rust, et redirige `rclrs` vers
+un chemin d'espace colcon qui n'existe pas sur la machine de développement. `cargo test
+--workspace` échoue alors avec une erreur qui ne parle ni de colcon ni de ROS.
+
+Toujours construire depuis `ros2/` :
+
+```bash
+cd ros2 && colcon build      # et non : colcon build --base-paths ros2
+```
+
+Si l'erreur s'est déjà produite, supprimer `.cargo/` et `log/` à la racine.
+
+---
+
 ## Limites connues
 
 - La boucle de contrôle cadence sur l'horloge murale tout en horodatant avec l'horloge

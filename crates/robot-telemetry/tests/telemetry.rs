@@ -123,6 +123,80 @@ fn counters_accumulate_across_collections() {
     assert_eq!(telemetry.counters().commands_rejected, 3);
 }
 
+// --- Etouffement du bruit ------------------------------------------------------------
+
+#[test]
+fn a_repeated_rejection_is_not_logged_over_and_over() {
+    // Cas concret : le robot passe en SAFE_STOP pendant que Nav2 commande encore. La
+    // pile continue de publier a 20 Hz, chaque consigne est refusee, et sans
+    // etouffement le journal se remplit de la meme ligne au moment precis ou on a
+    // besoin de le lire.
+    let (mut robot, mut telemetry) = booted();
+
+    for _ in 0..50 {
+        let _ = robot.submit_command(cmd(0.2, CommandSource::Ai, t(BOOT)), t(BOOT));
+        telemetry.collect_from(&mut robot);
+    }
+
+    assert_eq!(
+        telemetry.counters().commands_rejected,
+        50,
+        "le comptage doit rester exact, seul le journal s'allege"
+    );
+    assert!(
+        telemetry.counters().suppressed_logs >= 49,
+        "seulement {} lignes etouffees sur 50 refus identiques",
+        telemetry.counters().suppressed_logs
+    );
+}
+
+#[test]
+fn a_rejection_of_another_kind_is_reported_again() {
+    let (mut robot, mut telemetry) = booted();
+
+    let _ = robot.submit_command(cmd(0.2, CommandSource::Ai, t(BOOT)), t(BOOT));
+    telemetry.collect_from(&mut robot);
+    let after_first = telemetry.counters().suppressed_logs;
+
+    // Motif different : consigne non finie, et non plus source non habilitee.
+    let _ = robot.submit_command(
+        MotionCommand::new(Velocity2d::new(f64::NAN, 0.0), CommandSource::Ai, t(BOOT)),
+        t(BOOT),
+    );
+    telemetry.collect_from(&mut robot);
+
+    assert_eq!(
+        telemetry.counters().suppressed_logs,
+        after_first,
+        "un refus de nature differente ne doit pas etre etouffe"
+    );
+}
+
+#[test]
+fn a_state_change_makes_a_rejection_worth_reporting_again() {
+    // Apres un changement d'etat, le meme refus n'a plus la meme signification : il
+    // decrit desormais une nouvelle situation.
+    let (mut robot, mut telemetry) = booted();
+
+    let _ = robot.submit_command(cmd(0.2, CommandSource::Ai, t(BOOT)), t(BOOT));
+    telemetry.collect_from(&mut robot);
+
+    robot
+        .request_state(RobotState::Teleoperation, t(BOOT))
+        .expect("transition autorisee");
+    telemetry.collect_from(&mut robot);
+
+    let before = telemetry.counters().suppressed_logs;
+    let _ = robot.submit_command(cmd(0.2, CommandSource::Ai, t(BOOT)), t(BOOT));
+    telemetry.collect_from(&mut robot);
+
+    assert_eq!(
+        telemetry.counters().suppressed_logs,
+        before,
+        "le premier refus apres un changement d'etat doit etre journalise"
+    );
+}
+
 // --- Collecte -----------------------------------------------------------------------
 
 #[test]

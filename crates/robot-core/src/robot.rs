@@ -221,7 +221,16 @@ impl Robot {
 
         let decision = self.safety.evaluate(authority, now);
 
+        // Une condition qui impose l'arret et qui persiste a deja ete signalee au cycle
+        // ou elle est apparue, et le robot est deja arrete. La re-emettre a chaque cycle
+        // produirait des dizaines d'evenements par seconde sans rien apprendre.
+        let already_stopped = self.state == RobotState::SafeStop;
+
         for violation in &decision.violations {
+            if already_stopped && violation.requires_safe_stop() {
+                continue;
+            }
+
             self.emit(RobotEvent::SafetyViolationRaised {
                 violation: *violation,
                 at: now,

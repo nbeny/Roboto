@@ -56,6 +56,15 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all --check
 ```
 
+L'adaptateur ROS 2 vit dans un espace colcon séparé et se construit dans un conteneur —
+voir [`ros2/README.md`](ros2/README.md) :
+
+```bash
+docker build -t roboto-ros2:jazzy docker/ros2
+docker run --rm -v "$PWD":/workspace -w /workspace/ros2 roboto-ros2:jazzy colcon build
+docker run --rm -v "$PWD":/workspace -w /workspace roboto-ros2:jazzy bash scripts/ros2-smoke-test.sh
+```
+
 ---
 
 ## Crates
@@ -66,7 +75,7 @@ cargo fmt --all --check
 | `robot-safety` | Saturation vitesse/accélération, watchdog, arrêt d'urgence. | M1 ✅ |
 | `robot-core` | Machine à états, autorité des commandes, boucle de contrôle. | M1 ✅ |
 | `robot-telemetry` | Compteurs, instantané, logs structurés. | M1 ✅ |
-| `robot-ros2` | Adaptateur ROS 2 (`rclrs`). | M2 |
+| `robot_ros2` | Adaptateur ROS 2 (`rclrs`), dans [`ros2/`](ros2/). | M2 ✅ |
 | `robot-hal` | Traits d'abstraction matérielle + implémentations mock. | M4 |
 | `robot-mcu` | Protocole série versionné Rust ↔ Pico 2. | M4 |
 
@@ -133,7 +142,7 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 | # | Milestone | État |
 |---|---|---|
 | M1 | Cœur Rust minimal | ✅ |
-| M2 | Adaptateur ROS 2 + nœud | |
+| M2 | Adaptateur ROS 2 + nœud | ✅ |
 | M3 | Simulation Gazebo | |
 | M4 | Firmware Pico 2 + protocole série | |
 | M5 | Bring-up robot réel | |

@@ -7,6 +7,16 @@
 /ros2/install/
 /ros2/log/
 
+# Genere par colcon-ros-cargo : les entrees [patch.crates-io] pointant vers les crates
+# de messages de l'espace d'installation local.
+/ros2/.cargo/
+
+# Verrou de l'adaptateur ROS 2 : il reference des crates de messages generees
+# localement, dont les versions dependent de la distribution ROS 2 installee. Le
+# versionner le rendrait faux pour tout le monde sauf son auteur.
+# Voir docs/architecture/0005-adaptateur-ros2-hors-workspace.md.
+/ros2/src/robot_ros2/Cargo.lock
+
 # Python
 __pycache__/
 *.py[cod]

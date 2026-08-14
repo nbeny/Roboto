@@ -1,0 +1,38 @@
+# Espace de travail Cargo autonome, et non membre du workspace racine.
+#
+# Les dependances `geometry_msgs`, `std_msgs` et `std_srvs` sont des crates **generees**
+# par `rosidl_rust` dans l'espace d'installation colcon. Elles n'existent pas sur
+# crates.io — la seule version publiee de `geometry_msgs` a ete yankee en avril 2024.
+# Ce paquet ne se construit donc que dans l'environnement decrit par docker/ros2/,
+# avec `colcon build`.
+#
+# Le coeur du robot, lui, reste construit par un `cargo test` nu depuis la racine.
+[workspace]
+
+[package]
+name = "robot_ros2"
+description = "Adaptateur ROS 2 du coeur du robot : traduit topics et services en commandes du coeur."
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/nbeny/Roboto"
+authors = ["Nicolas BENY"]
+
+[[bin]]
+name = "robot_node"
+path = "src/main.rs"
+
+[dependencies]
+# Crates generees par rosidl_rust dans l'espace colcon.
+geometry_msgs = "*"
+std_msgs = "*"
+std_srvs = "*"
+rclrs = "0.7"
+
+# Le coeur, par chemin. Aucune de ces crates ne connait ROS 2.
+robot-core = { path = "../../../crates/robot-core" }
+robot-telemetry = { path = "../../../crates/robot-telemetry" }
+robot-types = { path = "../../../crates/robot-types" }
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

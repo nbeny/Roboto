@@ -7,6 +7,12 @@ members = [
     "crates/robot-telemetry",
 ]
 
+# `ros2/` contient un espace colcon, pas des membres Cargo. Les crates de messages
+# ROS 2 (`geometry_msgs`, `std_msgs`...) sont generees localement par `rosidl_rust` :
+# elles n'existent pas sur crates.io et ne peuvent donc pas etre resolues ici.
+# Voir docs/architecture/0005-adaptateur-ros2-hors-workspace.md.
+exclude = ["ros2"]
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"

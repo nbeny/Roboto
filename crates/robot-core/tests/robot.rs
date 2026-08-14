@@ -541,6 +541,47 @@ fn a_safe_stop_emits_both_a_violation_and_an_engagement() {
 }
 
 #[test]
+fn a_persistent_violation_is_not_re_reported_every_cycle() {
+    // Une condition qui dure — arret d'urgence engage — a deja ete signalee et traitee.
+    // La re-emettre a chaque cycle noierait les journaux a 50 evenements par seconde
+    // sans rien apprendre a personne.
+    let mut robot = teleoperating(0.2);
+    robot.engage_emergency_stop(t(BOOT + 100));
+    robot.drain_events().for_each(drop);
+
+    for step in 1..=50 {
+        robot.tick(t(BOOT + 100 + step * 20));
+    }
+
+    let violations = robot
+        .drain_events()
+        .filter(|event| event.kind() == "safety_violation")
+        .count();
+
+    assert!(
+        violations <= 1,
+        "{violations} constats emis pour une seule condition persistante"
+    );
+}
+
+#[test]
+fn the_violation_that_triggers_the_safe_stop_is_still_reported() {
+    let mut robot = teleoperating(0.2);
+    robot.tick(t(BOOT + 100));
+    robot.drain_events().for_each(drop);
+
+    robot.tick(t(BOOT + 500));
+
+    let events: Vec<_> = robot.drain_events().collect();
+    assert!(
+        events
+            .iter()
+            .any(|event| event.kind() == "safety_violation"),
+        "le constat a l'origine de l'arret doit etre emis"
+    );
+}
+
+#[test]
 fn draining_the_events_empties_the_buffer() {
     let mut robot = booted();
     robot

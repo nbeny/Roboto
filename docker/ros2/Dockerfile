@@ -45,14 +45,17 @@ RUN pip install --break-system-packages colcon-cargo colcon-ros-cargo \
 WORKDIR /opt/ros2_rust_ws
 RUN mkdir -p src \
     && git clone --depth 1 https://github.com/ros2-rust/ros2_rust.git src/ros2_rust \
-    && vcs import src < src/ros2_rust/ros2_rust_${ROS_DISTRO}.repos \
-    # Les paquets d'exemples ne servent a rien ici et l'un d'eux
-    # (examples_rclrs_message_demo) casse la construction en amont de sensor_msgs,
-    # dont M3 aura besoin pour le LiDAR et l'IMU.
-    && rm -rf src/examples
+    && vcs import src < src/ros2_rust/ros2_rust_${ROS_DISTRO}.repos
 
+# Les paquets d'exemples sont ignores, pas supprimes : `examples_rclrs_message_demo`
+# echoue a resoudre son paquet de messages et faisait avorter `nav_msgs` et
+# `sensor_msgs`, dont la Milestone 3 aura besoin. Les sources restent disponibles dans
+# l'image comme banc d'essai pour diagnostiquer la resolution des crates generees.
 RUN source "/opt/ros/${ROS_DISTRO}/setup.bash" \
-    && colcon build --event-handlers console_direct+ --cmake-args -DCMAKE_BUILD_TYPE=Release
+    && colcon build \
+        --event-handlers console_direct+ \
+        --packages-ignore-regex '^examples_.*' '^rust_pubsub$' \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 # Sourcer les deux espaces a chaque shell interactif ou non interactif.
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /etc/bash.bashrc \

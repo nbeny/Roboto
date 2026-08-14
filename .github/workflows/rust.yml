@@ -50,6 +50,34 @@ jobs:
       - name: Compilation au plancher de compatibilite
         run: cargo +1.85.0 check --workspace --all-features
 
+  ros2:
+    name: Adaptateur ROS 2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # L'image embarque ROS 2 Jazzy, Rust et l'espace colcon ros2_rust, dont la
+      # construction genere les crates Rust des messages. Voir
+      # docs/architecture/0005-adaptateur-ros2-hors-workspace.md.
+      - name: Construire l'image ROS 2
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/ros2
+          tags: roboto-ros2:jazzy
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Construire l'adaptateur
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace/ros2 \
+            roboto-ros2:jazzy colcon build
+
+      - name: Tester l'adaptateur
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace/ros2 \
+            roboto-ros2:jazzy colcon test --event-handlers console_direct+
+
   windows:
     name: Windows
     runs-on: windows-latest

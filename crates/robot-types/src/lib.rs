@@ -11,11 +11,13 @@
 //! du robot deterministe et testable sans materiel : un test peut fabriquer une
 //! seconde entiere sans dormir.
 
+mod clock;
 mod command;
 mod pose;
 mod time;
 mod velocity;
 
+pub use clock::{ClockReading, MonotonicClock};
 pub use command::{CommandSource, MotionCommand};
 pub use pose::Pose2d;
 pub use time::Monotonic;

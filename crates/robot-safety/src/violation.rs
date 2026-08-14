@@ -13,8 +13,22 @@ pub enum SafetyViolation {
     NonFiniteCommand,
     /// L'arret d'urgence est engage.
     EmergencyStopEngaged,
-    /// Aucune commande recue dans le delai imparti.
+    /// Aucune commande recue dans le delai imparti, **alors que le robot roulait**.
+    ///
+    /// C'est le cas dangereux : le robot est en mouvement et son pilote s'est tu.
     CommandTimeout {
+        /// Temps ecoule depuis la derniere commande.
+        elapsed: Duration,
+        /// Delai configure.
+        timeout: Duration,
+    },
+    /// Le flux de commandes s'est tari alors que le robot etait deja a l'arret.
+    ///
+    /// Distingue du cas precedent a dessein. Un robot immobile dont le pilote se tait
+    /// n'a rien a proteger : il est deja dans l'etat sur. Le forcer en `SAFE_STOP`
+    /// n'ajouterait aucune securite, et exigerait une intervention humaine apres chaque
+    /// mission accomplie — Nav2 cesse de publier des qu'il atteint son but.
+    CommandStreamIdle {
         /// Temps ecoule depuis la derniere commande.
         elapsed: Duration,
         /// Delai configure.
@@ -63,6 +77,18 @@ impl SafetyViolation {
         )
     }
 
+    /// Indique si ce constat traduit une perte du flux de commandes.
+    ///
+    /// Vrai que le robot ait ete en mouvement ou non : les deux cas restent utiles a
+    /// journaliser et a compter, seule leur gravite differe.
+    #[must_use]
+    pub const fn is_command_gap(self) -> bool {
+        matches!(
+            self,
+            Self::CommandTimeout { .. } | Self::CommandStreamIdle { .. }
+        )
+    }
+
     /// Libelle stable, destine aux logs structures et aux compteurs de telemetrie.
     #[must_use]
     pub const fn kind(self) -> &'static str {
@@ -70,6 +96,7 @@ impl SafetyViolation {
             Self::NonFiniteCommand => "non_finite_command",
             Self::EmergencyStopEngaged => "emergency_stop_engaged",
             Self::CommandTimeout { .. } => "command_timeout",
+            Self::CommandStreamIdle { .. } => "command_stream_idle",
             Self::LinearSpeedClamped { .. } => "linear_speed_clamped",
             Self::AngularSpeedClamped { .. } => "angular_speed_clamped",
             Self::LinearAccelerationClamped { .. } => "linear_acceleration_clamped",
@@ -85,7 +112,13 @@ impl fmt::Display for SafetyViolation {
             Self::EmergencyStopEngaged => f.write_str("arret d'urgence engage"),
             Self::CommandTimeout { elapsed, timeout } => write!(
                 f,
-                "aucune commande depuis {:.3}s (limite {:.3}s)",
+                "aucune commande depuis {:.3}s alors que le robot roulait (limite {:.3}s)",
+                elapsed.as_secs_f64(),
+                timeout.as_secs_f64()
+            ),
+            Self::CommandStreamIdle { elapsed, timeout } => write!(
+                f,
+                "flux de commandes tari depuis {:.3}s, robot deja a l'arret (limite {:.3}s)",
                 elapsed.as_secs_f64(),
                 timeout.as_secs_f64()
             ),

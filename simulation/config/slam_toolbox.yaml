@@ -1,0 +1,89 @@
+# Cartographie et localisation simultanees.
+#
+# `slam_toolbox` fournit la transformee `map -> odom`. Elle vient completer la chaine
+# que Gazebo publie deja :
+#
+#     map ──(slam_toolbox)──► odom ──(diff_drive)──► base_footprint ──(URDF)──► capteurs
+#
+# En mode `mapping`, la carte se construit pendant que le robot navigue. C'est le mode
+# retenu pour la Milestone 6 : il evite d'avoir a cartographier puis relancer avec
+# `amcl` et une carte enregistree, et c'est ce que fait le tutoriel « navigating while
+# mapping » de Nav2.
+
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: true
+
+    # `slam_toolbox` est un noeud a cycle de vie. Sans gestionnaire pour le configurer et
+    # l'activer, il demarre, reste en `unconfigured`, ne s'abonne jamais a `/scan` et ne
+    # publie jamais `/map` — le tout sans emettre le moindre avertissement.
+    # `autonomy.launch.py` lui dedie donc un `lifecycle_manager_slam`.
+    use_lifecycle_manager: true
+
+    # --- Solveur ---------------------------------------------------------------------
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # --- Reperes et entrees ------------------------------------------------------------
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    mode: mapping
+
+    debug_logging: false
+    throttle_scans: 1
+    # 50 Hz : la transformee map -> odom doit etre au moins aussi fraiche que la boucle
+    # de controle, sans quoi la navigation raisonne sur une position perimee.
+    transform_publish_period: 0.02
+    map_update_interval: 1.0
+    # 5 cm : compromis habituel entre finesse et cout. Sous les 22 cm de large du robot,
+    # donc un passage etroit reste representable.
+    resolution: 0.05
+    # Portee du RPLIDAR C1.
+    max_laser_range: 12.0
+    minimum_time_interval: 0.5
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.0
+    stack_size_to_use: 40000000
+    enable_interactive_mode: true
+
+    # --- Recalage ----------------------------------------------------------------------
+    use_scan_matching: true
+    use_scan_barycenter: true
+    # Un robot de 30 cm : accumuler 20 cm avant d'ajouter un noeud garde le graphe leger
+    # sans perdre de detail utile.
+    minimum_travel_distance: 0.2
+    minimum_travel_heading: 0.2
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 12.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5
+    loop_search_maximum_distance: 3.0
+    do_loop_closing: true
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+
+    # --- Correlation -------------------------------------------------------------------
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    distance_variance_penalty: 0.5
+    angle_variance_penalty: 1.0
+    fine_search_angle_offset: 0.00349
+    coarse_search_angle_offset: 0.349
+    coarse_angle_resolution: 0.0349
+    minimum_angle_penalty: 0.9
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true

@@ -19,22 +19,58 @@ simulateur.
 
 ## Lancer
 
+Deux lancements, selon ce qu'on veut faire.
+
+| Lancement | Contenu |
+|---|---|
+| `simulation.launch.py` | Gazebo, le robot, le pont, le cœur Rust — téléopération |
+| `autonomy.launch.py` | tout ce qui précède, plus SLAM et Nav2 — navigation autonome |
+
+### Dans Docker
+
 ```bash
-docker build -t roboto-sim:jazzy docker/simulation      # une fois, ~4 min
+docker build -t roboto-sim:jazzy docker/simulation      # une fois
 docker run --rm -it -v "$PWD":/workspace -w /workspace roboto-sim:jazzy bash
 
 # Dans le conteneur
 colcon build --base-paths ros2          # si l'adaptateur n'est pas déjà construit
 source ros2/install/setup.bash
-ros2 launch simulation/launch/simulation.launch.py
+ros2 launch simulation/launch/autonomy.launch.py
 ```
 
 Sous PowerShell, remplacer `"$PWD"` par `"${PWD}"`.
 
-Essai automatique de bout en bout :
+### Nativement dans WSL2
+
+```bash
+bash scripts/setup-wsl2.sh              # installe Nav2, SLAM, Rust, ros2_rust
+```
+
+Le script est idempotent et n'installe que ce qui manque. Il signale aussi le piège de
+performance : si le dépôt est sur le disque Windows, Cargo y écrit des dizaines de
+milliers de petits fichiers à travers 9p, et il vaut mieux rediriger `CARGO_TARGET_DIR`
+côté Linux.
+
+### Essais automatiques
 
 ```bash
 docker run --rm -v "$PWD":/workspace -w /workspace roboto-sim:jazzy bash scripts/sim-smoke-test.sh
+docker run --rm -v "$PWD":/workspace -w /workspace roboto-sim:jazzy bash scripts/nav-smoke-test.sh
+```
+
+### Envoyer un but
+
+```bash
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
+  "{pose: {header: {frame_id: 'map'}, pose: {position: {x: 1.5, y: -1.0}, orientation: {w: 1.0}}}}"
+```
+
+Si le robot ne bouge pas, la première chose à vérifier est son état : le cœur n'accepte
+les consignes de Nav2 qu'en `NAVIGATING`.
+
+```bash
+ros2 topic echo /robot_core/state --once
+ros2 topic pub --once /robot_core/request_state std_msgs/msg/String "{data: 'NAVIGATING'}"
 ```
 
 ---
@@ -91,6 +127,53 @@ horodatées en temps simulé doit recevoir `--ros-args -p use_sim_time:=true`. S
 En Harmonic, il n'existe pas de LiDAR CPU : `gpu_lidar` passe par le pipeline de rendu.
 L'image force donc le rendu logiciel (`LIBGL_ALWAYS_SOFTWARE=1`, llvmpipe). Cela
 fonctionne, mais coûte : le LiDAR tourne autour de 8,5 Hz au lieu des 10 Hz demandés.
+
+---
+
+## Navigation autonome
+
+```
+Nav2 ──► velocity_smoother ──► /nav/cmd_vel ──► robot_core ──► robot-safety
+                                                                    │
+                                                             ~/cmd_vel_safe ──► roues
+```
+
+`slam_toolbox` tourne en mode `mapping` : la carte se construit pendant que le robot
+navigue, ce qui évite d'avoir à cartographier puis relancer avec `amcl` et une carte
+enregistrée.
+
+**Nav2 publie sur `/nav/cmd_vel`, jamais sur `/cmd_vel`.** C'est le topic d'arrivée qui
+détermine la source, donc l'autorité : une consigne arrivant là est traitée comme
+`CommandSource::Navigation` et n'est acceptée qu'en état `NAVIGATING`. La téléopération
+garde `/cmd_vel` et son autorité propre.
+
+**Les limites de Nav2 sont strictement à l'intérieur de l'enveloppe de sécurité** —
+0,35 m/s contre 0,50. Ce n'est pas de la prudence décorative : voir
+[ADR 0007](../docs/architecture/0007-marge-entre-nav2-et-la-securite.md).
+
+---
+
+## Diagnostic
+
+**Le robot ne bouge pas alors que Nav2 planifie.** Vérifier l'état du cœur en premier :
+il refuse les consignes de navigation hors `NAVIGATING`, et ne le signale qu'en niveau
+`debug`.
+
+```bash
+ros2 topic echo /robot_core/state --once
+```
+
+**`/map` n'est jamais publié.** `slam_toolbox` est un nœud à cycle de vie. Sans
+gestionnaire pour le configurer puis l'activer, il démarre, reste en `unconfigured`, ne
+s'abonne jamais à `/scan` — et n'émet aucun avertissement. `autonomy.launch.py` lui dédie
+un `lifecycle_manager_slam` pour cette raison.
+
+```bash
+ros2 lifecycle get /slam_toolbox     # doit répondre « active »
+```
+
+**Les transformées semblent hors délai.** Tout outil en ligne de commande lisant des
+données horodatées en temps simulé doit recevoir `--ros-args -p use_sim_time:=true`.
 
 ---
 

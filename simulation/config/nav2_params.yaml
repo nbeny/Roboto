@@ -1,0 +1,280 @@
+# Navigation autonome.
+#
+# ============================================================================
+#  LES LIMITES DE NAV2 SONT STRICTEMENT A L'INTERIEUR DE L'ENVELOPPE DE SECURITE
+# ============================================================================
+#
+#                        Nav2        robot-safety
+#   vitesse lineaire     0,35 m/s    0,50 m/s
+#   vitesse angulaire    0,80 rad/s  1,00 rad/s
+#   acceleration lin.    0,40 m/s^2  0,50 m/s^2
+#   acceleration ang.    1,20 rad/s^2 1,50 rad/s^2
+#
+# Ce n'est pas de la prudence decorative. Nav2 simule des trajectoires en supposant que
+# le robot execute ce qu'il commande. Si la couche de securite venait borner ses
+# consignes, ce modele deviendrait faux : Nav2 planifierait des trajectoires
+# inatteignables, constaterait un ecart, corrigerait, et se mettrait a osciller. On
+# conclurait que « Nav2 suit mal », alors que le probleme serait un desaccord de limites.
+#
+# La marge doit donc etre maintenue si l'on releve les limites de securite — et jamais
+# l'inverse.
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_footprint
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 20
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    # 20 Hz plutot que les 30 par defaut : le rendu logiciel de Gazebo consomme deja
+    # beaucoup de processeur, et le Raspberry Pi 4 en aura besoin aussi.
+    controller_frequency: 20.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 15.0
+
+    general_goal_checker:
+      stateful: true
+      plugin: "nav2_controller::SimpleGoalChecker"
+      # 15 cm : la moitie de la longueur du robot. Exiger mieux ferait tourner le robot
+      # sur place indefiniment pour grappiller une precision que l'odometrie n'a pas.
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.25
+
+    # DWB plutot que MPPI : bien moins gourmand en calcul, et c'est le meme processeur
+    # qui devra plus tard faire tourner la perception sur un Raspberry Pi 4.
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: true
+
+      min_vel_x: -0.15
+      max_vel_x: 0.35
+      min_vel_y: 0.0
+      max_vel_y: 0.0
+      max_vel_theta: 0.8
+      min_speed_xy: 0.0
+      max_speed_xy: 0.35
+      min_speed_theta: 0.0
+
+      acc_lim_x: 0.4
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.2
+      decel_lim_x: -0.4
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.2
+
+      vx_samples: 20
+      vy_samples: 1
+      vtheta_samples: 20
+      sim_time: 1.7
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      transform_tolerance: 0.2
+      xy_goal_tolerance: 0.15
+      trans_stopped_velocity: 0.25
+      short_circuit_trajectory_evaluation: true
+      stateful: true
+
+      critics:
+        - RotateToGoal
+        - Oscillation
+        - BaseObstacle
+        - GoalAlign
+        - PathAlign
+        - PathDist
+        - GoalDist
+      BaseObstacle.scale: 0.02
+      PathAlign.scale: 32.0
+      PathAlign.forward_point_distance: 0.15
+      GoalAlign.scale: 24.0
+      GoalAlign.forward_point_distance: 0.15
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_footprint
+      rolling_window: true
+      width: 4
+      height: 4
+      resolution: 0.05
+
+      # Empreinte reelle du chassis : 30 x 22 cm, avec 1 cm de marge sur chaque bord.
+      footprint: "[[0.16, 0.12], [0.16, -0.12], [-0.16, -0.12], [-0.16, 0.12]]"
+
+      plugins: ["obstacle_layer", "inflation_layer"]
+
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /scan
+          # Le LiDAR est a 15 cm du sol : rien en dessous de 10 cm ne sera jamais vu.
+          min_obstacle_height: 0.0
+          max_obstacle_height: 0.5
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 12.0
+          raytrace_min_range: 0.05
+          obstacle_max_range: 10.0
+          obstacle_min_range: 0.05
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        # Rayon circonscrit du robot (~0,20 m) plus une marge de securite.
+        inflation_radius: 0.35
+
+      always_send_full_costmap: true
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_footprint
+      resolution: 0.05
+      track_unknown_space: true
+
+      footprint: "[[0.16, 0.12], [0.16, -0.12], [-0.16, -0.12], [-0.16, 0.12]]"
+
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        # La carte vient de slam_toolbox, qui la publie en continu pendant qu'elle se
+        # construit : il faut donc suivre les mises a jour, pas seulement la premiere.
+        map_subscribe_transient_local: true
+        subscribe_to_updates: true
+
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /scan
+          min_obstacle_height: 0.0
+          max_obstacle_height: 0.5
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 12.0
+          raytrace_min_range: 0.05
+          obstacle_max_range: 10.0
+          obstacle_min_range: 0.05
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.35
+
+      always_send_full_costmap: true
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 5.0
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.3
+      use_astar: false
+      allow_unknown: true
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: true
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait", "assisted_teleop"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    assisted_teleop:
+      plugin: "nav2_behaviors::AssistedTeleop"
+    local_frame: odom
+    global_frame: map
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.2
+    simulate_ahead_time: 2.0
+    # Les manoeuvres de degagement restent elles aussi sous l'enveloppe de securite.
+    max_rotational_vel: 0.8
+    min_rotational_vel: 0.2
+    rotational_acc_lim: 1.2
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true
+    loop_rate: 20
+    stop_on_failure: false
+    action_server_result_timeout: 900.0
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    # Memes bornes que le controleur, et toujours sous l'enveloppe de securite.
+    max_velocity: [0.35, 0.0, 0.8]
+    min_velocity: [-0.15, 0.0, -0.8]
+    max_accel: [0.4, 0.0, 1.2]
+    max_decel: [-0.4, 0.0, -1.2]
+    odom_topic: "/odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0

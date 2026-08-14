@@ -154,6 +154,7 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 | M3 | Simulation Gazebo | ✅ |
 | M4 | Protocole série + logique du firmware | ✅ |
 | M4b | Binaire du firmware : PIO, USB, pont en H | bloqué sur le matériel |
+| M6 | SLAM + Nav2 en simulation | ✅ |
 | M5 | Bring-up robot réel | |
 | M6 | SLAM + Nav2 | |
 | M7 | API TypeScript + dashboard | |

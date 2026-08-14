@@ -131,15 +131,25 @@ impl SafetyLayer {
             violations.push(SafetyViolation::NonFiniteCommand);
         }
 
-        // 4. Le flux de commandes s'est tari.
+        // 4. Le flux de commandes s'est tari. Reste a savoir si c'est dangereux.
         if self.command_watchdog.is_expired(now) {
-            violations.push(SafetyViolation::CommandTimeout {
-                // `is_expired` implique un watchdog arme, donc une valeur presente.
-                elapsed: self
-                    .command_watchdog
-                    .elapsed_since_feed(now)
-                    .unwrap_or_default(),
-                timeout: self.command_watchdog.timeout(),
+            // `is_expired` implique un watchdog arme, donc une valeur presente.
+            let elapsed = self
+                .command_watchdog
+                .elapsed_since_feed(now)
+                .unwrap_or_default();
+            let timeout = self.command_watchdog.timeout();
+
+            // Le robot est-il reellement immobile ? Il faut les deux conditions : qu'il
+            // ne roule pas, et que la derniere consigne recue ne lui demandait pas de
+            // partir. Une consigne de mouvement perimee est aussi dangereuse qu'un robot
+            // deja lance.
+            let at_rest = self.last_output.is_stationary() && requested.is_stationary();
+
+            violations.push(if at_rest {
+                SafetyViolation::CommandStreamIdle { elapsed, timeout }
+            } else {
+                SafetyViolation::CommandTimeout { elapsed, timeout }
             });
         }
 

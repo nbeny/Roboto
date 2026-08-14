@@ -20,6 +20,10 @@ RUN apt-get update \
         "ros-${ROS_DISTRO}-joint-state-publisher" \
         "ros-${ROS_DISTRO}-tf2-ros" \
         "ros-${ROS_DISTRO}-teleop-twist-keyboard" \
+        # Cartographie et navigation autonome (Milestone 6).
+        "ros-${ROS_DISTRO}-slam-toolbox" \
+        "ros-${ROS_DISTRO}-navigation2" \
+        "ros-${ROS_DISTRO}-nav2-bringup" \
         # Rendu logiciel : en Harmonic, le LiDAR est un capteur `gpu_lidar` et passe
         # donc par le pipeline de rendu. Sans GPU dans le conteneur, c'est llvmpipe qui
         # s'en charge — lent, mais suffisant pour un LiDAR 2D a 10 Hz.

@@ -13,7 +13,11 @@
 //! 2. **Autorite refusee** — l'etat courant n'autorise pas le mouvement : vitesse nulle
 //!    immediate, sans violation (c'est le fonctionnement nominal).
 //! 3. **Consigne non finie** (`NaN`, infini) — defaut logiciel, arret requis.
-//! 4. **Watchdog de commande expire** — le flux de commandes s'est tari, arret requis.
+//! 4. **Watchdog de commande expire** — le flux de commandes s'est tari. Arret requis
+//!    **si le robot roule** ou si la derniere consigne lui demandait de partir. S'il est
+//!    deja immobile et qu'on ne lui demande rien, le constat est signale sans escalade :
+//!    il est deja dans l'etat sur, et l'y verrouiller exigerait une intervention humaine
+//!    apres chaque mission accomplie.
 //! 5. **Saturation des vitesses** — la consigne est bornee, jamais rejetee.
 //! 6. **Saturation des accelerations** — sur le `dt` ecoule depuis l'evaluation precedente.
 //!

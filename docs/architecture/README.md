@@ -12,6 +12,8 @@ probablement pas une.
 | [0004](0004-ros2-jazzy-et-gazebo-harmonic.md) | ROS 2 Jazzy Jalisco et Gazebo Harmonic | Acceptée |
 | [0005](0005-adaptateur-ros2-hors-workspace.md) | L'adaptateur ROS 2 vit hors du workspace Cargo | Acceptée |
 | [0006](0006-horloge-monotone-et-non-murale.md) | La boucle de contrôle se cadence sur une horloge monotone | Acceptée |
+| [0007](0007-marge-entre-nav2-et-la-securite.md) | Les limites de Nav2 restent à l'intérieur de l'enveloppe de sécurité | Acceptée |
+| [0008](0008-watchdog-de-commande-et-robot-immobile.md) | Le watchdog de commande n'escalade que si le robot roule | Acceptée |
 
 Le design complet — architecture, nomenclature matérielle, roadmap — vit dans
 [`../superpowers/specs/2026-08-14-robot-ai-core-design.md`](../superpowers/specs/2026-08-14-robot-ai-core-design.md).

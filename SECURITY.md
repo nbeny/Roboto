@@ -27,7 +27,11 @@ rejetée, quelle qu'en soit la justification :
 
 - aucune consigne ne parvient au matériel sans avoir traversé `robot-safety` ;
 - une vitesse `NaN` ou infinie ne se propage jamais jusqu'à la sortie ;
-- l'absence de commande pendant `command_timeout` en état de mouvement force `SAFE_STOP` ;
+- l'absence de commande pendant `command_timeout` force `SAFE_STOP` **si le robot roule**,
+  ou si la dernière consigne reçue lui demandait de partir. Un robot déjà immobile dont le
+  pilote se tait est signalé mais pas verrouillé : il est déjà dans l'état sûr, et
+  l'y enfermer exigerait une intervention humaine après chaque mission accomplie — Nav2
+  cesse de publier dès qu'il atteint son but ;
 - l'arrêt d'urgence produit une vitesse nulle immédiate depuis n'importe quel état, y
   compris à l'arrêt ;
 - `SAFE_STOP` ne se quitte que par une action explicite, et jamais tant que l'arrêt

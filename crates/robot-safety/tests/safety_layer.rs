@@ -271,6 +271,73 @@ fn a_steady_command_stream_keeps_the_watchdog_satisfied() {
 }
 
 #[test]
+fn a_command_gap_while_stationary_does_not_force_a_safe_stop() {
+    // Cas concret : Nav2 atteint son but et cesse de publier. Le robot est deja arrete.
+    // Le verrouiller en SAFE_STOP n'ajouterait aucune securite et exigerait une
+    // intervention humaine apres chaque mission accomplie.
+    let mut layer = layer();
+    layer.notify_command_activity(t(0));
+    settle(&mut layer, MotionAuthority::Allowed(Velocity2d::ZERO), t(0));
+
+    let decision = layer.evaluate(MotionAuthority::Allowed(Velocity2d::ZERO), t(500));
+
+    assert!(
+        !decision.safe_stop_required,
+        "un robot deja a l'arret n'a rien a proteger"
+    );
+    assert!(contains_kind(&decision.violations, "command_stream_idle"));
+    assert_velocity_close(decision.velocity, Velocity2d::ZERO);
+}
+
+#[test]
+fn a_command_gap_while_moving_still_forces_a_safe_stop() {
+    // Le cas dangereux, et celui pour lequel le watchdog existe : le robot roule et son
+    // pilote s'est taru.
+    let mut layer = layer();
+    layer.notify_command_activity(t(0));
+    settle(&mut layer, MotionAuthority::Allowed(v(0.3, 0.0)), t(0));
+
+    let decision = layer.evaluate(MotionAuthority::Allowed(v(0.3, 0.0)), t(500));
+
+    assert!(decision.safe_stop_required);
+    assert!(contains_kind(&decision.violations, "command_timeout"));
+    assert_velocity_close(decision.velocity, Velocity2d::ZERO);
+}
+
+#[test]
+fn a_stale_request_to_move_forces_a_safe_stop_even_from_a_standstill() {
+    // Le robot n'a pas encore bouge, mais la derniere consigne recue lui demandait de
+    // partir. La liaison meurt : il ne doit surtout pas rester sur cette consigne.
+    let mut layer = layer();
+    layer.notify_command_activity(t(0));
+    settle(&mut layer, MotionAuthority::Allowed(Velocity2d::ZERO), t(0));
+
+    let decision = layer.evaluate(MotionAuthority::Allowed(v(0.3, 0.0)), t(500));
+
+    assert!(decision.safe_stop_required);
+    assert!(contains_kind(&decision.violations, "command_timeout"));
+}
+
+#[test]
+fn an_idle_stream_lets_the_robot_resume_without_ceremony() {
+    let mut layer = layer();
+    layer.notify_command_activity(t(0));
+    settle(&mut layer, MotionAuthority::Allowed(Velocity2d::ZERO), t(0));
+    settle(
+        &mut layer,
+        MotionAuthority::Allowed(Velocity2d::ZERO),
+        t(500),
+    );
+
+    // Une nouvelle mission commence : la couche accepte immediatement.
+    layer.notify_command_activity(t(600));
+    let decision = layer.evaluate(MotionAuthority::Allowed(v(0.2, 0.0)), t(700));
+
+    assert!(!decision.safe_stop_required);
+    assert!(decision.velocity.linear > 0.0);
+}
+
+#[test]
 fn a_disarmed_watchdog_cannot_trigger_a_safe_stop() {
     let mut layer = layer();
 

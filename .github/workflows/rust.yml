@@ -117,6 +117,13 @@ jobs:
           docker run --rm -v "$PWD":/workspace -w /workspace \
             roboto-sim:jazzy bash scripts/sim-smoke-test.sh
 
+      # Verifie aussi que la marge entre les limites de Nav2 et l'enveloppe de securite
+      # tient : voir docs/architecture/0007-marge-entre-nav2-et-la-securite.md.
+      - name: Essai de navigation autonome
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace \
+            roboto-sim:jazzy bash scripts/nav-smoke-test.sh
+
   windows:
     name: Windows
     runs-on: windows-latest

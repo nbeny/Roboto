@@ -31,6 +31,8 @@ venv/
 node_modules/
 .next/
 dist/
+*.tsbuildinfo
+next-env.d.ts
 
 # Editors and OS
 .vscode/

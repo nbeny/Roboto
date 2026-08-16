@@ -3,12 +3,14 @@ import {
   emptySnapshot,
   occupancyMapFromMessage,
   parseRobotState,
+  visionSceneFromMessage,
   poseFromOdometry,
   scanSummary,
   velocityFromTwist,
   type OccupancyMap,
   type RobotSnapshot,
   type RobotStateName,
+  type VisionScene,
 } from "./snapshot.ts";
 
 /**
@@ -49,6 +51,7 @@ export class RobotService {
 
   #snapshot: RobotSnapshot = emptySnapshot();
   #map: OccupancyMap | null = null;
+  #vision: VisionScene | null = null;
   #listeners = new Set<(snapshot: RobotSnapshot) => void>();
 
   constructor(options: RobotServiceOptions) {
@@ -64,6 +67,11 @@ export class RobotService {
   /** Derniere carte recue, ou `null` si la cartographie n'a rien publie. */
   get map(): OccupancyMap | null {
     return this.#map;
+  }
+
+  /** Derniere scene reconnue, ou `null` si la vision ne tourne pas. */
+  get vision(): VisionScene | null {
+    return this.#vision;
   }
 
   onUpdate(listener: (snapshot: RobotSnapshot) => void): void {
@@ -109,6 +117,15 @@ export class RobotService {
       const map = occupancyMapFromMessage(message);
       if (map !== null) {
         this.#map = map;
+      }
+    });
+
+    // La vision est facultative : si le noeud ne tourne pas, ce topic reste muet et
+    // tout le reste continue de fonctionner.
+    this.#client.subscribe("/vision/scene", "std_msgs/msg/String", (message) => {
+      const scene = visionSceneFromMessage(message);
+      if (scene !== null) {
+        this.#vision = scene;
       }
     });
   }

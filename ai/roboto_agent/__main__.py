@@ -55,7 +55,15 @@ def self_test(executor: ToolExecutor, audit: AuditLog, area: OperatingArea) -> i
     print("== Lectures ==")
     check("get_robot_state", executor.get_robot_state())
     check("get_pose", executor.get_pose())
-    check("inspect", executor.inspect())
+
+    perceived = executor.inspect()
+    check("inspect", perceived)
+    # La vision est facultative : son absence n'est pas un échec, mais elle doit être
+    # visible. Un « OK » silencieux laisserait croire que le robot a regardé.
+    if '"vision": "indisponible' in perceived:
+        print("  NOTE   la perception visuelle ne publie pas — le robot est aveugle")
+    else:
+        print("  OK     la caméra publie")
 
     print("== La barrière refuse ce qui sort de la zone ==")
     # Aucun appel réseau ne doit partir : c'est la propriété qui porte le milestone.

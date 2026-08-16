@@ -19,6 +19,7 @@ class FakeApi:
     def __init__(self) -> None:
         self.calls: list[tuple[str, tuple]] = []
         self.fail_with: Exception | None = None
+        self.vision_fails = False
 
     def _record(self, name: str, *args):
         self.calls.append((name, args))
@@ -34,6 +35,14 @@ class FakeApi:
 
     def sensors(self):
         return self._record("sensors")
+
+    def vision(self):
+        self.calls.append(("vision", ()))
+        if self.vision_fails:
+            raise ConnectionError("la vision ne publie pas")
+        if self.fail_with is not None:
+            raise self.fail_with
+        return {"description": "La camera voit : marqueur 7 sur la gauche.", "detections": []}
 
     def navigate(self, x, y):
         return self._record("navigate", x, y)
@@ -132,11 +141,34 @@ def test_reads_are_returned_as_json(setup):
     assert json.loads(executor.get_robot_state())["accepted"] is True
 
 
+def test_inspect_reports_both_the_lidar_and_the_camera(setup):
+    api, _, executor = setup
+
+    answer = executor.inspect()
+
+    assert api.names() == ["sensors", "vision"]
+    assert "marqueur 7" in answer
+
+
+def test_inspect_says_when_the_camera_is_silent_instead_of_implying_it_saw_nothing(setup):
+    # « La vision ne tourne pas » et « la camera ne reconnait rien » sont deux choses
+    # differentes. Les confondre ferait croire a un robot aveugle qu'il a bien regarde,
+    # et c'est exactement la confusion qui fait avancer un robot dans un obstacle.
+    api, _, executor = setup
+    api.vision_fails = True
+
+    answer = executor.inspect()
+
+    assert "lidar" in answer.lower() or "telemetre" in answer.lower() or "scan" in answer.lower()
+    assert "vision" in answer.lower()
+    assert "indisponible" in answer.lower() or "ne publie pas" in answer.lower()
+
+
 def test_a_failed_read_is_reported_not_faked(setup):
     api, _, executor = setup
     api.fail_with = TimeoutError("délai dépassé")
 
-    answer = executor.inspect()
+    answer = executor.get_robot_state()
 
     assert "impossible" in answer.lower()
     assert "délai" in answer
@@ -152,10 +184,12 @@ def test_dispatch_routes_each_tool(setup):
         executor.dispatch(name, {})
     executor.dispatch("navigate_to", {"x": 1.0, "y": 1.0})
 
+    # `inspect` interroge les deux capteurs : télémètre laser puis caméra.
     assert api.names() == [
         "status",
         "pose",
         "sensors",
+        "vision",
         "request_state",
         "stop",
         "navigate",

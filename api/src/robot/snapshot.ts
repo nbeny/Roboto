@@ -111,6 +111,64 @@ export function occupancyMapFromMessage(raw: unknown): OccupancyMap | null {
   return { width, height, resolution, origin: { x, y, theta }, cells: cells as number[] };
 }
 
+/**
+ * Ce que la camera reconnait, tel que publie par le noeud de vision.
+ *
+ * Tenu a l'ecart de [`RobotSnapshot`] pour la meme raison que la carte : la scene change
+ * a 2 Hz et n'interesse pas chaque cycle de controle. Elle se recupere par requete.
+ */
+export interface VisionDetection {
+  readonly label: string;
+  readonly confidence: number;
+  /** Gisement en radians, positif vers la gauche. `null` si non calculable. */
+  readonly bearing: number | null;
+}
+
+export interface VisionScene {
+  readonly detections: readonly VisionDetection[];
+  /** Phrase prete a lire, produite par la couche de vision. */
+  readonly description: string;
+  readonly at: string;
+}
+
+/** Traduit la charge utile JSON publiee sur `/vision/scene`. */
+export function visionSceneFromMessage(raw: unknown): VisionScene | null {
+  const text = child(raw, "data");
+  if (typeof text !== "string") {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // Une scene illisible est ignoree plutot que propagee : la perception est une
+    // information d'appoint, elle ne doit pas faire tomber la lecture de l'etat.
+    return null;
+  }
+
+  const detections = child(parsed, "detections");
+  const description = child(parsed, "description");
+  const at = child(parsed, "at");
+
+  if (!Array.isArray(detections) || typeof description !== "string") {
+    return null;
+  }
+
+  return {
+    detections: detections.flatMap((entry) => {
+      const label = child(entry, "label");
+      const confidence = finiteField(entry, "confidence");
+      const bearing = finiteField(entry, "bearing");
+      return typeof label === "string" && confidence !== null
+        ? [{ label, confidence, bearing }]
+        : [];
+    }),
+    description,
+    at: typeof at === "string" ? at : new Date().toISOString(),
+  };
+}
+
 /** Ou en est la mission de navigation courante. */
 export type NavigationStatus =
   | { readonly phase: "idle" }

@@ -104,6 +104,16 @@ export class ApiServer {
         case "GET /api/robot/sensors":
           return json(response, 200, { scan: this.#service.snapshot.scan });
 
+        case "GET /api/robot/vision": {
+          const scene = this.#service.vision;
+          // 404 plutot qu'une scene vide : « la vision ne tourne pas » et « la camera
+          // ne reconnait rien » sont deux situations differentes, et confondre les deux
+          // ferait croire a un robot aveugle qu'il a bien regarde.
+          return scene === null
+            ? json(response, 404, { error: "la perception visuelle ne publie pas" })
+            : json(response, 200, scene);
+        }
+
         case "GET /api/robot/map": {
           const map = this.#service.map;
           // 404 plutot qu'une carte vide : « pas encore de carte » et « carte

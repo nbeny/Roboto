@@ -42,6 +42,9 @@ class RobotApiClient:
     def sensors(self) -> dict[str, Any]:
         return self._request("GET", "/api/robot/sensors")
 
+    def vision(self) -> dict[str, Any]:
+        return self._request("GET", "/api/robot/vision")
+
     # --- Action ----------------------------------------------------------------------
 
     def navigate(self, x: float, y: float) -> dict[str, Any]:

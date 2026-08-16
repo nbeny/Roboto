@@ -101,5 +101,64 @@ ROBOTO_API="${API}" ROBOTO_AREA="-5,5,-4,4" \
 grep -q "traversant toute la chaîne" /tmp/agent.log \
     || fail "l'agent n'a pas conduit puis arrêté le robot"
 
+echo "== La voix arrête le robot sans passer par le modèle =="
+# Aucune clé Anthropic n'est définie dans ce conteneur : l'agent conversationnel est
+# donc absent. Si l'arrêt vocal fonctionne quand même, c'est qu'il ne dépend pas du
+# modèle — ce qui est précisément la propriété recherchée.
+cd /workspace/voice
+python3 -m pytest -q > /tmp/voice_tests.log 2>&1 || {
+    tail -20 /tmp/voice_tests.log >&2; fail "essais unitaires de la voix"
+}
+ok "la couche vocale passe ses essais"
+
+python3 -m roboto_voice --self-test > /tmp/voice_selftest.log 2>&1 \
+    || { cat /tmp/voice_selftest.log >&2; fail "tri des phrases vocales"; }
+ok "les phrases sont correctement triées"
+
+# Remettre le robot en mouvement pour que l'arrêt vocal ait quelque chose à arrêter.
+cd /workspace/ai
+python3 - <<'PYTHON' || fail "impossible de relancer le robot"
+import os, time, json
+from roboto_agent.client import RobotApiClient
+from roboto_agent.safety import AuditLog, OperatingArea
+from roboto_agent.tools import ToolExecutor
+
+api = RobotApiClient(os.environ.get("ROBOTO_API", "http://127.0.0.1:8080"))
+executor = ToolExecutor(api, OperatingArea(-5.0, 5.0, -4.0, 4.0), AuditLog())
+
+api.clear_emergency_stop()
+api.resume()
+time.sleep(2)
+executor.allow_navigation()
+time.sleep(3)
+executor.navigate_to(-1.0, 0.0)
+
+for _ in range(60):
+    velocity = json.loads(executor.get_robot_state()).get("velocity") or {}
+    if abs(velocity.get("linear", 0.0)) > 0.05:
+        raise SystemExit(0)
+    time.sleep(1)
+raise SystemExit("le robot n'a pas redémarré")
+PYTHON
+ok "le robot est de nouveau en mouvement"
+
+cd /workspace/voice
+ROBOTO_API="${API}" python3 -m roboto_voice --say "arrête-toi tout de suite" --quiet \
+    > /tmp/voice_stop.log 2>&1 || { cat /tmp/voice_stop.log >&2; fail "arrêt vocal"; }
+cat /tmp/voice_stop.log
+
+stopped=false
+deadline=$((SECONDS + 30))
+while (( SECONDS < deadline )); do
+    state="$(curl -sS --max-time 5 "${API}/api/robot/status" | node -e "
+      let raw=''; process.stdin.on('data',c=>raw+=c);
+      process.stdin.on('end',()=>{try{console.log(JSON.parse(raw).state)}catch{console.log('')}});
+    ")"
+    [[ "${state}" == "SAFE_STOP" ]] && { stopped=true; break; }
+    sleep 1
+done
+[[ "${stopped}" == true ]] || fail "la voix n'a pas arrêté le robot (état ${state})"
+ok "« arrête-toi » a arrêté le robot, sans aucun modèle de langage"
+
 echo
 echo "Tous les essais de l'agent sont passés."

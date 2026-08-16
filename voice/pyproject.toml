@@ -1,0 +1,31 @@
+[project]
+name = "roboto-voice"
+version = "0.1.0"
+description = "Commande vocale de Roboto, avec court-circuit d'arrêt."
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+
+# Aucune dépendance obligatoire. Le court-circuit d'arrêt — la partie qui compte — est
+# du Python standard, et doit le rester : il ne peut pas dépendre de ce qui peut manquer.
+dependencies = []
+
+[project.optional-dependencies]
+# Transcription. `openai-whisper` télécharge son modèle au premier usage.
+whisper = ["openai-whisper>=20231117"]
+# Capture micro.
+mic = ["sounddevice>=0.4", "numpy>=1.24"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+roboto-voice = "roboto_voice.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["roboto_voice*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

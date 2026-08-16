@@ -47,6 +47,9 @@ n'est pas une convention documentaire, c'est le graphe de dépendances Cargo.
 
 ## Démarrage
 
+> **Tu débutes ?** [**NOOB.md**](NOOB.md) reprend tout depuis zéro : quoi installer, quoi
+> lancer, quoi vérifier, et quoi faire quand ça casse.
+
 Le cœur se compile et se teste en Rust pur, sans ROS 2, sans Docker, sans WSL — y compris
 sous Windows.
 
@@ -94,6 +97,8 @@ Hors du workspace Cargo :
 | [`api/`](api/) | REST et WebSocket, en TypeScript. Aucune logique robotique. | M7 ✅ |
 | [`web/`](web/) | Tableau de bord Next.js. | M7 ✅ |
 | [`ai/`](ai/) | Agent conversationnel. Aucun accès ROS 2, aucune consigne de vitesse. | M10 ✅ |
+| [`vision/`](vision/) | Perception visuelle. Décrit, ne commande jamais. | M8 ✅ |
+| [`voice/`](voice/) | Commande vocale. Le mot d'arrêt court-circuite le modèle. | M9 ✅ |
 | [`simulation/`](simulation/) | Modèle Gazebo, SLAM, Nav2. | M3, M6 ✅ |
 
 ---
@@ -165,11 +170,11 @@ Décisions d'architecture : [`docs/architecture/`](docs/architecture/).
 | M4b | Binaire du firmware : PIO, USB, pont en H | bloqué sur le matériel |
 | M6 | SLAM + Nav2 en simulation | ✅ |
 | M7 | API TypeScript + dashboard | ✅ |
+| M8 | Perception visuelle (marqueurs ArUco) | ✅ |
+| M9 | Commande vocale à court-circuit d'arrêt | ✅ |
 | M10 | Agent IA à outils de haut niveau | ✅ |
-| M5 | Bring-up robot réel | |
-| M6 | SLAM + Nav2 | |
-| M7 | API TypeScript + dashboard | |
-| M8–M11 | Vision, voix, agent IA, produit | |
+| M5 | Bring-up robot réel | bloqué sur le matériel |
+| M11 | Finition produit | |
 
 M1 à M3 ne nécessitent aucun achat. **Le matériel n'est commandé qu'après validation de
 M3** — on saura alors précisément quoi commander et pourquoi. M3 étant validée, la

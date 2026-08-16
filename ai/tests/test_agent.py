@@ -108,7 +108,7 @@ def test_several_tool_calls_in_one_turn_are_all_answered(parts):
 
     results = claude.requests[-1]["messages"][-1]["content"]
     assert [block["tool_use_id"] for block in results] == ["a", "b"]
-    assert api.names() == ["pose", "sensors"]
+    assert api.names() == ["pose", "sensors", "vision"]
 
 
 def test_a_refused_goal_is_reported_to_the_model_not_hidden(parts):

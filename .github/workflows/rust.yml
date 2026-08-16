@@ -193,6 +193,45 @@ jobs:
       - run: python -m roboto_agent --print-tools > /dev/null
         working-directory: ai
 
+  vision:
+    name: Vision
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -e ".[dev]"
+        working-directory: vision
+
+      # Aucune camera, aucune photo, aucun poids de modele : les essais fabriquent leurs
+      # propres marqueurs avec OpenCV, qui sait produire ce qu'il sait lire.
+      - run: python -m pytest -q
+        working-directory: vision
+
+  voice:
+    name: Voix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -e ".[dev]"
+        working-directory: voice
+
+      - run: python -m pytest -q
+        working-directory: voice
+
+      # Le court-circuit d'arret trie correctement les phrases. Sans micro, sans modele,
+      # sans robot : c'est tout l'interet de l'avoir ecrit sans dependance.
+      - run: python -m roboto_voice --self-test
+        working-directory: voice
+
   windows:
     name: Windows
     runs-on: windows-latest

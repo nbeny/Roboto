@@ -34,6 +34,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 SIMULATION_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+REPO_DIR = os.path.dirname(SIMULATION_DIR)
 
 #: Serveurs Nav2 pilotes par le gestionnaire de cycle de vie, dans l'ordre de demarrage.
 NAVIGATION_NODES = [
@@ -79,6 +80,11 @@ def generate_launch_description() -> LaunchDescription:
                 "rosbridge",
                 default_value="true",
                 description="Demarrer la passerelle WebSocket utilisee par l'API.",
+            ),
+            DeclareLaunchArgument(
+                "vision",
+                default_value="true",
+                description="Demarrer la perception visuelle (marqueurs ArUco).",
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -184,6 +190,21 @@ def generate_launch_description() -> LaunchDescription:
                 parameters=[use_sim_time, {"port": 9090}],
                 output="screen",
                 condition=IfCondition(LaunchConfiguration("rosbridge")),
+            ),
+            # --- Perception visuelle ----------------------------------------------------
+            # Ce noeud n'a aucun editeur de vitesse : il decrit ce qu'il voit sur
+            # `/vision/scene`, et rien de plus. La vision informe, elle ne commande pas.
+            Node(
+                package="robot_vision",
+                executable="vision_node",
+                name="vision_node",
+                parameters=[use_sim_time, {"horizontal_fov": 1.047}],
+                # La bibliotheque de vision vit hors de l'espace colcon, a la racine du
+                # depot, pour rester testable sans ROS 2. On lui indique son chemin
+                # plutot que d'exiger un `pip install` avant toute simulation.
+                additional_env={"ROBOTO_VISION_PATH": os.path.join(REPO_DIR, "vision")},
+                output="screen",
+                condition=IfCondition(LaunchConfiguration("vision")),
             ),
             # --- Autorisation du mouvement ---------------------------------------------
             # Le coeur n'accepte les consignes de navigation qu'en etat NAVIGATING. Sans

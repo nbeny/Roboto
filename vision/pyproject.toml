@@ -1,0 +1,27 @@
+[project]
+name = "roboto-vision"
+version = "0.1.0"
+description = "Perception visuelle de Roboto : description de scène depuis une image."
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+
+# `headless` : le robot n'a pas d'écran, et les variantes GUI tirent tout Qt pour rien.
+# `contrib` : ArUco y vit.
+dependencies = ["opencv-contrib-python-headless>=4.7", "numpy>=1.24"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+roboto-vision = "roboto_vision.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["roboto_vision*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

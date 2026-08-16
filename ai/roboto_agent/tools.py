@@ -44,10 +44,12 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "name": "inspect",
         "description": (
             "Rend ce que le robot perçoit maintenant : obstacle le plus proche relevé "
-            "par le télémètre laser, nombre de mesures valides, portée du capteur. "
-            "Appelle cet outil lorsque l'utilisateur demande si la voie est libre, ce "
-            "qu'il y a autour du robot, ou avant de lancer un déplacement dans une "
-            "zone dont tu ignores l'encombrement."
+            "par le télémètre laser, et ce que la caméra reconnaît — repères ArUco, "
+            "avec leur position à gauche ou à droite. Appelle cet outil lorsque "
+            "l'utilisateur demande si la voie est libre, ce qu'il y a autour du robot, "
+            "ce que le robot voit, ou avant de lancer un déplacement dans une zone dont "
+            "tu ignores l'encombrement. Si un capteur est marqué indisponible, dis-le "
+            "plutôt que de conclure que rien n'a été détecté."
         ),
         "input_schema": {"type": "object", "properties": {}, "required": []},
     },
@@ -111,6 +113,7 @@ class RobotApi(Protocol):
     def status(self) -> dict[str, Any]: ...
     def pose(self) -> dict[str, Any]: ...
     def sensors(self) -> dict[str, Any]: ...
+    def vision(self) -> dict[str, Any]: ...
     def navigate(self, x: float, y: float) -> dict[str, Any]: ...
     def request_state(self, state: str) -> dict[str, Any]: ...
     def stop(self) -> dict[str, Any]: ...
@@ -138,7 +141,28 @@ class ToolExecutor:
         return self._read("get_pose", self._api.pose)
 
     def inspect(self) -> str:
-        return self._read("inspect", self._api.sensors)
+        """Ce que le robot perçoit : télémètre laser **et** caméra.
+
+        Les deux sont rapportés séparément, et l'absence de l'un est dite explicitement.
+        Confondre « la caméra ne reconnaît rien » avec « la caméra ne publie pas »
+        ferait croire à un robot aveugle qu'il a bien regardé — et c'est précisément
+        cette confusion qui fait avancer un robot dans un obstacle.
+        """
+        parts: dict[str, Any] = {}
+
+        try:
+            parts["lidar"] = self._api.sensors()
+        except Exception as error:  # noqa: BLE001
+            parts["lidar"] = f"indisponible : {error}"
+
+        try:
+            parts["vision"] = self._api.vision()
+        except Exception as error:  # noqa: BLE001
+            # La vision est facultative : le robot fonctionne sans, mais il doit le dire.
+            parts["vision"] = f"indisponible : {error}"
+
+        self._audit.record("inspect", {}, "lu")
+        return json.dumps(parts, ensure_ascii=False)
 
     def _read(self, name: str, call) -> str:
         try:

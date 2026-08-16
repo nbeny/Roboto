@@ -16,6 +16,8 @@ probablement pas une.
 | [0008](0008-watchdog-de-commande-et-robot-immobile.md) | Le watchdog de commande n'escalade que si le robot roule | Acceptée |
 | [0009](0009-api-par-rosbridge.md) | L'API parle à ROS 2 par rosbridge, pas par un binding natif | Acceptée |
 | [0010](0010-agent-sans-acces-ros2.md) | L'agent IA n'atteint le robot que par l'API HTTP | Acceptée |
+| [0011](0011-la-vision-decrit-elle-ne-commande-pas.md) | La vision décrit, elle ne commande pas | Acceptée |
+| [0012](0012-le-mot-d-arret-court-circuite-le-modele.md) | Un ordre d'arrêt vocal ne traverse jamais le modèle | Acceptée |
 
 Le design complet — architecture, nomenclature matérielle, roadmap — vit dans
 [`../superpowers/specs/2026-08-14-robot-ai-core-design.md`](../superpowers/specs/2026-08-14-robot-ai-core-design.md).
